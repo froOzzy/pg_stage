@@ -59,7 +59,12 @@ class Obfuscation:
         if not mutation_func:
             raise ValueError(f'Not found mutation {mutation_name}.')
 
-        table_name, column_name = result.group(1).split('.')
+        try:
+            table_name, column_name = result.group(1).split('.')
+        except ValueError:
+            schema, table_name, column_name = result.group(1).split('.')
+            table_name = f'{schema}.{table_name}'
+
         mutation_relations = mutation_params.get('relations', [])
         self._map_tables[table_name][column_name] = {
             'mutation_name': mutation_name,
