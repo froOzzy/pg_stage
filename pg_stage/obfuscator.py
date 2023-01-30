@@ -8,7 +8,7 @@ from uuid import uuid4
 from pg_stage.mutator import Mutator
 
 
-class Obfuscation:
+class Obfuscator:
     """Главный класс для работы с обфускатором"""
 
     not_found_relation = 'Not found relation!'
