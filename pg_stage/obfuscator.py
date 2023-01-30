@@ -199,4 +199,4 @@ class Obfuscation:
         for line in stdin:
             new_line = self._parse_line(line=line)
             if isinstance(new_line, str):
-                print(new_line)
+                sys.stdout.write(new_line)
