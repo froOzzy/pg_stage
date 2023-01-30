@@ -159,11 +159,7 @@ class Obfuscation:
         if not result:
             return
 
-        try:
-            _, self._table_name = result.group(1).split('.')
-        except ValueError:
-            self._table_name = result.group(1)
-
+        self._table_name = result.group(1)
         self._table_columns = [item.strip() for item in result.group(2).split(',')]
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
         if self._table_name in self._delete_tables:
