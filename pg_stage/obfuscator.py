@@ -197,9 +197,9 @@ class Obfuscation:
     def execute(self, stdin=None) -> None:
         """Метод для выполнения обхода карты таблиц и выполнения фейка"""
         if not stdin:
-            stdin = sys.stdin.readline
+            stdin = sys.stdin
 
-        for line in iter(stdin, b''):
+        for line in stdin:
             new_line = self._parse_line(line=line)
             if isinstance(new_line, str):
                 print(new_line)
