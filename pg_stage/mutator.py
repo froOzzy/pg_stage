@@ -43,7 +43,7 @@ class Mutator:
         Метод для возвращения NULL значения
         :return: NULL
         """
-        return 'NULL'
+        return '\\N'
 
     def mutation_phone_number(self, **kwargs) -> str:
         """Метод для формирования номера телефона"""
