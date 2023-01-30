@@ -165,11 +165,8 @@ class Obfuscator:
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
         if self._table_name in self._delete_tables:
             self._is_delete = True
-            self._is_data = False
 
-        else:
-            self._is_data = True
-
+        self._is_data = True
         return line
 
     def _parse_line(self, line: str) -> Optional[str]:

@@ -20,7 +20,7 @@ def test_parse_copy_values_with_delete_comment(obfuscator_object: Obfuscator, ta
         line=f'COPY {table_name} (column_1, column_2) FROM stdin;',
     )
     assert obfuscator_object._is_delete
-    assert not obfuscator_object._is_data
+    assert obfuscator_object._is_data
 
 
 @pytest.mark.parametrize("table_name", ['table', 'schema.table'])
