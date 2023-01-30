@@ -32,10 +32,6 @@ class Obfuscation:
         self._table_name = None
         self._table_columns = []
         self._enumerate_table_columns = {}
-        if self._is_delete:
-            self._is_delete = False
-            return None
-
         self._is_delete = False
         return line
 
@@ -170,10 +166,11 @@ class Obfuscation:
         if self._table_name in self._delete_tables:
             self._is_delete = True
             self._is_data = False
-            return None
+
         else:
             self._is_data = True
-            return line
+
+        return line
 
     def _parse_line(self, line: str) -> Optional[str]:
         """Метод для парсинга строки из дампа"""
