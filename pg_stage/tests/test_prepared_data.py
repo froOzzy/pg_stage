@@ -71,3 +71,26 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
         }
         & result
     )
+
+
+def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):
+    """
+    Arrange: Дамп таблиц, в которых необходимо мутировать одно связанное поле
+    Act: Вызов функции `_parse_line` класса Obfuscator
+    Assert: В stdout данные поле мутировано во всех таблицах одинаково и не задета таблица с похожими данными
+    """
+    with open('pg_stage/tests/sql/test_parse_copy_values_with_relations.sql') as file:
+        dump_sql = file.read()
+
+    result = []
+    for line in dump_sql.splitlines():
+        new_line = obfuscator_object._parse_line(line=line)
+        if new_line is not None:
+            result.append(new_line)
+
+    index_copy_table4 = result.index('20f654fe-b27d-4051-9fd4-000000000001\t111n\tLourense') - 1
+    assert 'table_4' in result[index_copy_table4]
+    assert len([line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000001\t111n\tLourense']) == 1
+    assert len([line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000002\t222n\tKent']) == 1
+    assert len({line for line in result if '20f654fe-b27d-4051-9fd4-000000000001' in line and '111n' not in line}) == 1
+    assert len({line for line in result if '20f654fe-b27d-4051-9fd4-000000000002' in line and '222n' not in line}) == 1
