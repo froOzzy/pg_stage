@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "pg_stage"
+version = "1.0"
+description = "Postgresql make obfuscation dump for dev or stage"
+authors = ["froOzzy"]
+
+[tool.black]
+line-length = 120
+target-version = ["py39"]
+include = '\.pyi?$'
+skip-string-normalization = true
