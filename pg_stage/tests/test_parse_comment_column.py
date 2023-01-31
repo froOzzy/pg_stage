@@ -3,11 +3,6 @@ import pytest
 from pg_stage.obfuscator import Obfuscator
 
 
-@pytest.fixture(autouse=True)
-def obfuscator_object():
-    return Obfuscator()
-
-
 @pytest.mark.parametrize("table_name, column_name", [('table', 'column'), ('schema.table', 'column')])
 def test_parse_comment_column_with_mutation(
     obfuscator_object: Obfuscator,

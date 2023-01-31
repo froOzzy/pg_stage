@@ -3,11 +3,6 @@ import pytest
 from pg_stage.obfuscator import Obfuscator
 
 
-@pytest.fixture(autouse=True)
-def obfuscator_object():
-    return Obfuscator()
-
-
 @pytest.mark.parametrize("table_name", ['table', 'schema.table'])
 def test_parse_copy_values_with_delete_comment(obfuscator_object: Obfuscator, table_name: str):
     """

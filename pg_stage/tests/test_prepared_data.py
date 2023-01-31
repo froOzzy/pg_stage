@@ -1,11 +1,4 @@
-import pytest
-
 from pg_stage.obfuscator import Obfuscator
-
-
-@pytest.fixture(autouse=True)
-def obfuscator_object():
-    return Obfuscator()
 
 
 def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator):
