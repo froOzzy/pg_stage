@@ -1,0 +1,17 @@
+name: PyTest
+on: push
+
+jobs:
+  test:
+    runs-on: debian:bullseya-slim
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: pip3 install -r requrements.txt
+
+      - name: Run tests
+        run: pytest
