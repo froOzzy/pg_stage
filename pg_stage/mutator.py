@@ -52,3 +52,8 @@ class Mutator:
     def mutator_address(self, **_) -> str:
         """Метод для формирования адреса"""
         return self._faker.address()
+
+    def mutator_uri(self, **kwargs) -> str:
+        """Метод для формирования uri"""
+        max_length = kwargs.get('max_length', 2048)
+        return self._faker.uri()[:max_length]
