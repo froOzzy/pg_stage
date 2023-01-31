@@ -1,2 +1,3 @@
 Faker>=16.6.0
 pytest
+black
