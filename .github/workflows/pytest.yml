@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install dependencies
-        run: pip3 install -r requrements.txt
+        run: ls -la && pip3 install -r requrements.txt
 
       - name: Run tests
         run: pytest
