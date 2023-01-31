@@ -44,8 +44,7 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
             result.add(new_line)
 
     assert not (
-        {'cj@example.com', 'leo@example.com', 'donna@example.com', 'charlie@example.com', 'fun@example.com'}
-        & result
+        {'cj@example.com', 'leo@example.com', 'donna@example.com', 'charlie@example.com', 'fun@example.com'} & result
     )
     assert not (
         {
@@ -59,7 +58,8 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
             'cff75fa3a052c9b2a9fc2dd',
             'b09909b6e83938dd41ffb5e931eeb3d646b1856dfb74a81acb1697b6d8466468047fe92286e011a4634c71b8d8775c7d5a31e19ce'
             '111bd31d0a61a4faf93d6af',
-        } & result
+        }
+        & result
     )
     assert not (
         {
@@ -68,5 +68,6 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
             '2IcBeSh6IVVCJyZpqBt',
             'QOqWQ24CMiRNuPUz8f5',
             'uMYA6c3A7uGoI0aEbJ8R',
-        } & result
+        }
+        & result
     )
