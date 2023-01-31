@@ -93,9 +93,7 @@ def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):
     assert (  # nosec
         len([line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000001\t111n\tLourense']) == 1
     )
-    assert (  # nosec
-        len([line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000002\t222n\tKent']) == 1
-    )
+    assert len([line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000002\t222n\tKent']) == 1  # nosec
     assert (  # nosec
         len({line for line in result if '20f654fe-b27d-4051-9fd4-000000000001' in line and '111n' not in line}) == 1
     )
