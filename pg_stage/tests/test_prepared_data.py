@@ -25,7 +25,7 @@ def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator):
         'COPY schema.table_2 (id, message, recipient, notes) FROM stdin;',
         '\\.',
     ]
-    assert assert_result == result
+    assert assert_result == result  # nosec
 
 
 def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
@@ -43,10 +43,10 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
         if new_line is not None:
             result.add(new_line)
 
-    assert not (
+    assert not (  # nosec
         {'cj@example.com', 'leo@example.com', 'donna@example.com', 'charlie@example.com', 'fun@example.com'} & result
     )
-    assert not (
+    assert not (  # nosec
         {
             '86a97ff982e87ed5af7d90ab2ce31d4e89a3af3e6a0490b067bb8213aea7a4ee0eeafae1d8fe3c6f990aead095092fcf852004b18'
             'e484ef22569aebf64c3747f',
@@ -61,7 +61,7 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
         }
         & result
     )
-    assert not (
+    assert not (  # nosec
         {
             'v8BMktHnOeokEBTy6As',
             'c5d6v3NS97D3wYkUltFQ',

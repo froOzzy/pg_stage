@@ -13,7 +13,7 @@ def test_parse_comment_table_with_mutation(obfuscator_object: Obfuscator, table_
     obfuscator_object._parse_line(
         line=f'COMMENT ON TABLE {table_name}' + ' IS \'anon: {"mutation_name": "delete"}\';',
     )
-    assert table_name in obfuscator_object._delete_tables
+    assert table_name in obfuscator_object._delete_tables  # nosec
 
 
 @pytest.mark.parametrize("table_name", ['table', 'schema.table'])
@@ -26,4 +26,4 @@ def test_parse_comment_table_with_invalid_mutation(obfuscator_object: Obfuscator
     obfuscator_object._parse_line(
         line=f'COMMENT ON TABLE {table_name}' + ' IS \'anon: {"mutation_name": "set"}\';',
     )
-    assert table_name not in obfuscator_object._delete_tables
+    assert table_name not in obfuscator_object._delete_tables  # nosec
