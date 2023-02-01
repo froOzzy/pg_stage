@@ -7,7 +7,7 @@ def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator):
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout нет данных из таблицы
     """
-    with open('pg_stage/tests/sql/test_parse_copy_values_with_delete_tables.sql') as file:
+    with open('tests/sql/test_parse_copy_values_with_delete_tables.sql') as file:
         dump_sql = file.read()
 
     result = []
@@ -34,7 +34,7 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout данные полей мутированы
     """
-    with open('pg_stage/tests/sql/test_parse_copy_values_with_mutation.sql') as file:
+    with open('tests/sql/test_parse_copy_values_with_mutation.sql') as file:
         dump_sql = file.read()
 
     result = set()
@@ -79,7 +79,7 @@ def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout данные поле мутировано во всех таблицах одинаково и не задета таблица с похожими данными
     """
-    with open('pg_stage/tests/sql/test_parse_copy_values_with_relations.sql') as file:
+    with open('tests/sql/test_parse_copy_values_with_relations.sql') as file:
         dump_sql = file.read()
 
     result = []

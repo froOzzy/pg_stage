@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # Test file
-main.py
+src/main.py
