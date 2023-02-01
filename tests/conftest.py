@@ -1,6 +1,6 @@
 import pytest
 
-from src.pg_stage.obfuscator import Obfuscator
+from pg_stage.obfuscator import Obfuscator
 
 
 @pytest.fixture(autouse=True)

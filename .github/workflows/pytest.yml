@@ -13,5 +13,8 @@ jobs:
       - name: Install dependencies
         run: pip3 install -r requirements.txt
 
+      - name: Install pg-stage
+      - run: python3 setup.py install
+
       - name: Run tests
         run: pytest
