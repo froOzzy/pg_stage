@@ -1,10 +1,10 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from os.path import join, dirname
 
 setup(
     name='pg_stage',
     version='0.1.1',
-    packages=['pg_stage'],
+    packages=find_packages('src'),
     long_description=open(join(dirname(__file__), 'README.md')).read(),
     install_requires=['Faker>=16.6.0'],
     extras_require={'dev': ['pytest']},
