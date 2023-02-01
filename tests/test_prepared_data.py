@@ -122,5 +122,5 @@ def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator):
         for line in result
         if '20f654fe-b27d-4051-9fd4-000000000001' in line or '20f654fe-b27d-4051-9fd4-000000000002' in line
     ]
-    assert prepared_result[0][0] == prepared_result[0][1]
-    assert prepared_result[1][0] == prepared_result[1][1]
+    assert prepared_result[0][0] == prepared_result[0][1]  # nosec
+    assert prepared_result[1][0] == prepared_result[1][1]  # nosec
