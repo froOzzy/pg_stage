@@ -4,7 +4,7 @@ from os.path import join, dirname
 setup(
     name='pg_stage',
     version='0.1.1',
-    packages=find_packages('src'),
+    packages=find_packages(exclude=['tests']),
     long_description=open(join(dirname(__file__), 'README.md')).read(),
     install_requires=['Faker>=16.6.0'],
     extras_require={'dev': ['pytest']},
