@@ -1,6 +1,6 @@
 import pytest
 
-from pg_stage.obfuscator import Obfuscator
+from src.pg_stage.obfuscator import Obfuscator
 
 
 @pytest.mark.parametrize("table_name", ['table', 'schema.table'])

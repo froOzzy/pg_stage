@@ -1,8 +1,24 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "pg_stage"
-version = "1.0"
-description = "Postgresql make obfuscation dump for dev or stage"
-authors = ["froOzzy"]
+version = "0.1.1"
+authors = [
+  { name="froOzzy", email="ieme5gll6u78@mail.ru" },
+]
+description = "Anonymization of data in pg_dump"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/froOzzy/pg_stage"
 
 [tool.black]
 line-length = 120

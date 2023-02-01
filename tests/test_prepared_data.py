@@ -1,4 +1,4 @@
-from pg_stage.obfuscator import Obfuscator
+from src.pg_stage.obfuscator import Obfuscator
 
 
 def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator):
