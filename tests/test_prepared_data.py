@@ -100,3 +100,27 @@ def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):
     assert (  # nosec
         len({line for line in result if '20f654fe-b27d-4051-9fd4-000000000002' in line and '222n' not in line}) == 1
     )
+
+
+def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator):
+    """
+    Arrange: Дамп таблицы, в которой необходимо мутировать данные с связанным полем внутри таблицы
+    Act: Вызов функции `_parse_line` класса Obfuscator
+    Assert: В stdout данные поле мутировано в двух столбцах одинаково
+    """
+    with open('tests/sql/test_parse_copy_values_with_self_relation.sql') as file:
+        dump_sql = file.read()
+
+    result = []
+    for line in dump_sql.splitlines():
+        new_line = obfuscator_object._parse_line(line=line)
+        if new_line is not None:
+            result.append(new_line)
+
+    prepared_result = [
+        line.split('\t')[1:]
+        for line in result
+        if '20f654fe-b27d-4051-9fd4-000000000001' in line or '20f654fe-b27d-4051-9fd4-000000000002' in line
+    ]
+    assert prepared_result[0][0] == prepared_result[0][1]
+    assert prepared_result[1][0] == prepared_result[1][1]
