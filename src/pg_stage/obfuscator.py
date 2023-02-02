@@ -2,7 +2,7 @@ import re
 import sys
 import json
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, List
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
@@ -13,9 +13,18 @@ class Obfuscator:
 
     not_found_relation = 'Not found relation!'
 
-    def __init__(self, delimiter: str = '\t', locale: str = 'en_US'):
+    def __init__(
+        self,
+        delimiter: str = '\t',
+        locale: str = 'en_US',
+        delete_tables_by_pattern: Optional[List[str]] = None,
+    ):
         """Метод инициализации класса"""
         self.delimiter = delimiter
+        self.delete_tables_by_pattern = delete_tables_by_pattern
+        if self.delete_tables_by_pattern is None:
+            self.delete_tables_by_pattern = []
+
         self._map_tables = defaultdict(dict)
         self._mutator = Mutator(locale=locale)
         self._relation_values = {}
@@ -163,9 +172,10 @@ class Obfuscator:
         self._table_name = result.group(1)
         self._table_columns = [item.strip() for item in result.group(2).split(',')]
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
-        if self._table_name in self._delete_tables:
-            self._is_delete = True
-
+        self._is_delete = (
+            self._table_name in self._delete_tables or
+            any(re.search(pattern, self._table_name) for pattern in self.delete_tables_by_pattern)
+        )
         self._is_data = True
         return line
 
