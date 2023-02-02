@@ -11,8 +11,6 @@ from pg_stage.mutator import Mutator
 class Obfuscator:
     """Главный класс для работы с обфускатором"""
 
-    not_found_relation = 'Not found relation!'
-
     def __init__(
         self,
         delimiter: str = '\t',
@@ -197,8 +195,8 @@ class Obfuscator:
 
         return line
 
-    def execute(self, stdin=None) -> None:
-        """Метод для выполнения обхода карты таблиц и выполнения фейка"""
+    def run(self, stdin=None) -> None:
+        """Метод для запуска обфускации"""
         if not stdin:
             stdin = sys.stdin
 

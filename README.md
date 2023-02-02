@@ -18,7 +18,7 @@ from pg_stage.obfuscator import Obfuscator
 
 
 obfuscator = Obfuscator(locale='ru_RU')
-obfuscator.execute()
+obfuscator.run()
 ```
 
 2. Add comments to a column or table:
