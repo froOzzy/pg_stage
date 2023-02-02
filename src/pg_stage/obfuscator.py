@@ -172,9 +172,8 @@ class Obfuscator:
         self._table_name = result.group(1)
         self._table_columns = [item.strip() for item in result.group(2).split(',')]
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
-        self._is_delete = (
-            self._table_name in self._delete_tables or
-            any(re.search(pattern, self._table_name) for pattern in self.delete_tables_by_pattern)
+        self._is_delete = self._table_name in self._delete_tables or any(
+            re.search(pattern, self._table_name) for pattern in self.delete_tables_by_pattern
         )
         self._is_data = True
         return line
