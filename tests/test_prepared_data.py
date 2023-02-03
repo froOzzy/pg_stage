@@ -51,7 +51,9 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
         'b09909b6e83938dd41ffb5e931eeb3d646b1856dfb74a81acb1697b6d8466468047fe92286e011a4634c71b8d8775c7d5a31e19ce'
         '111bd31d0a61a4faf93d6af',
     }
-    crypted_password = '400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504'
+    crypted_password = (  # nosec
+        '400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504'
+    )
     password_salts = {
         'v8BMktHnOeokEBTy6As',
         'c5d6v3NS97D3wYkUltFQ',
