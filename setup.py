@@ -3,7 +3,7 @@ from os.path import join, dirname
 
 setup(
     name='pg_stage',
-    version='0.1.7',
+    version='0.1.8',
     packages=['pg_stage'],
     package_dir={'': 'src'},
     long_description=open(join(dirname(__file__), 'README.md')).read(),
