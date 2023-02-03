@@ -53,7 +53,7 @@ class Mutator:
         """Метод для формирования адреса"""
         return self._faker.address()
 
-    def mutation_date_past(self, **kwargs) -> str:
+    def mutation_past_date(self, **kwargs) -> str:
         """
         Метод для формирования даты в прошедшем времени.
         start_date - самая ранняя допустимая дата в strtotime() формате
@@ -61,7 +61,7 @@ class Mutator:
         start_date = kwargs.get('start_date', '-30d')
         return self._faker.past_date(start_date=start_date).strftime('%Y-%m-%d')
 
-    def mutation_date_future(self, **kwargs) -> str:
+    def mutation_future_date(self, **kwargs) -> str:
         """
         Метод для формирования даты в будущем времени
         end_date - самая поздняя допустимая дата в strtotime() формате
