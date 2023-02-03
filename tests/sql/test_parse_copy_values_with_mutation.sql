@@ -1,4 +1,5 @@
 COMMENT ON COLUMN table_1.persistence_token IS 'anon: {"mutation_name": "empty_string"}';
+COMMENT ON COLUMN schema.table_1.crypted_password IS 'anon: {"mutation_name": "fixed_value", "mutation_kwargs": {"value": "400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504"}}';
 
 COPY table_1 (id, crypted_password, persistence_token, created_at, updated_at, active, first_name, last_name, agency_id, phone, perishable_token, extension, commissioned, region, division, location, last_request_at) FROM stdin;
 07750c56-fb37-46e1-b7b6-da530704c056	400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3255d3bd1edd18ffc4a8092e2616b9e5ca7954b2c52504	86a97ff982e87ed5af7d90ab2ce31d4e89a3af3e6a0490b067bb8213aea7a4ee0eeafae1d8fe3c6f990aead095092fcf852004b18e484ef22569aebf64c3747f	2016-06-03 18:23:06.25685	2016-06-03 18:23:06.25685	t	C.J.	Cregg	\N	1231231234	hw1rFSX7yJBz65lDVzYi	\N	f	\N	\N	\N	\N
@@ -11,6 +12,7 @@ abe9fd39-f0b3-4ec6-9006-9783fbdade07	400$8$50$ef1eb813f8d8b99d$2932a9dc75d10f135
 COMMENT ON COLUMN schema.table_1.email IS 'anon: {"mutation_name": "email"}';
 COMMENT ON COLUMN schema.table_1.password_salt IS 'anon: {"mutation_name": "null"}';
 COMMENT ON COLUMN schema.table_1.dt_birthday IS 'anon: {"mutation_name": "past_date"}';
+COMMENT ON COLUMN schema.table_1.crypted_password IS 'anon: {"mutation_name": "fixed_value", "mutation_kwargs": {"value": "400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504"}}';
 
 COPY schema.table_1 (id, email, crypted_password, password_salt, created_at, updated_at, active, first_name, last_name, dt_birthday, agency_id, phone, perishable_token, extension, commissioned, region, division, location, last_request_at) FROM stdin;
 07750c56-fb37-46e1-b7b6-da530704c056	cj@example.com	400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3255d3bd1edd18ffc4a8092e2616b9e5ca7954b2c52504	v8BMktHnOeokEBTy6As	2016-06-03 18:23:06.25685	2016-06-03 18:23:06.25685	t	C.J.	Cregg	1996-10-02	\N	1231231234	hw1rFSX7yJBz65lDVzYi	\N	f	\N	\N	\N	\N

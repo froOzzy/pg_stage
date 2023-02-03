@@ -23,6 +23,14 @@ class Mutator:
         """
         return ''
 
+    @staticmethod
+    def mutation_fixed_value(**kwargs) -> str:
+        """
+        Метод для вставки значения из параметров
+        :return: строка со значением
+        """
+        return str(kwargs.get('value', ''))
+
     def mutation_first_name(self, **_) -> str:
         """
         Метод для формирования фамилии
