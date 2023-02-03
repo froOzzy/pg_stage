@@ -10,7 +10,7 @@ abe9fd39-f0b3-4ec6-9006-9783fbdade07	400$8$50$ef1eb813f8d8b99d$2932a9dc75d10f135
 
 COMMENT ON COLUMN schema.table_1.email IS 'anon: {"mutation_name": "email"}';
 COMMENT ON COLUMN schema.table_1.password_salt IS 'anon: {"mutation_name": "null"}';
-COMMENT ON COLUMN schema.table_1.dt_birthday IS 'anon: {"mutation_name": "date_past"}';
+COMMENT ON COLUMN schema.table_1.dt_birthday IS 'anon: {"mutation_name": "past_date"}';
 
 COPY schema.table_1 (id, email, crypted_password, password_salt, created_at, updated_at, active, first_name, last_name, dt_birthday, agency_id, phone, perishable_token, extension, commissioned, region, division, location, last_request_at) FROM stdin;
 07750c56-fb37-46e1-b7b6-da530704c056	cj@example.com	400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3255d3bd1edd18ffc4a8092e2616b9e5ca7954b2c52504	v8BMktHnOeokEBTy6As	2016-06-03 18:23:06.25685	2016-06-03 18:23:06.25685	t	C.J.	Cregg	1996-10-02	\N	1231231234	hw1rFSX7yJBz65lDVzYi	\N	f	\N	\N	\N	\N

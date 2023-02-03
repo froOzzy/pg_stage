@@ -62,10 +62,10 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
     for line in dump_sql.splitlines():
         new_line = obfuscator_object._parse_line(line=line)
         if new_line is not None:
-            assert not any([email in new_line for email in emails])
-            assert not any([birthday in new_line for birthday in birthdays])
-            assert not any([token in new_line for token in tokens])
-            assert not any([password_salt in new_line for password_salt in password_salts])
+            assert not any([email in new_line for email in emails])  # nosec
+            assert not any([birthday in new_line for birthday in birthdays])  # nosec
+            assert not any([token in new_line for token in tokens])  # nosec
+            assert not any([password_salt in new_line for password_salt in password_salts])  # nosec
 
 
 def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):
