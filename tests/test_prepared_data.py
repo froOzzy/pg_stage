@@ -37,40 +37,35 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
     with open('tests/sql/test_parse_copy_values_with_mutation.sql') as file:
         dump_sql = file.read()
 
-    result = set()
+    emails = {'cj@example.com', 'leo@example.com', 'donna@example.com', 'charlie@example.com', 'fun@example.com'}
+    birthdays = {'1996-10-02', '1996-10-03', '2005-01-02', '2005-10-02', '2022-12-31'}
+    tokens = {
+        '86a97ff982e87ed5af7d90ab2ce31d4e89a3af3e6a0490b067bb8213aea7a4ee0eeafae1d8fe3c6f990aead095092fcf852004b18'
+        'e484ef22569aebf64c3747f',
+        '630aaf10f3edcb396181535476bccfd369e1ee9281cbc218d0861e6117b9839219cb403abed3b59468b2564c229d78b0cb610d0e1'
+        '6fa4a03dc4d93ed3d55deb3',
+        '06fa5d0f3a4d62ff60717ff3315301129a5bcd152f63f073b67d2e6a835b098524b1d097367283c97ca75db9154cf61d6a918248e'
+        'b68eaf8cd83d1a87cdd92dc',
+        '02cbd8d1e9690c7786375f9f6ec4da6fa3c2ead70d41a7aa1d7fe631477b42635210f0e8fa7579f6f4b5afdb364d9465623a2861e'
+        'cff75fa3a052c9b2a9fc2dd',
+        'b09909b6e83938dd41ffb5e931eeb3d646b1856dfb74a81acb1697b6d8466468047fe92286e011a4634c71b8d8775c7d5a31e19ce'
+        '111bd31d0a61a4faf93d6af',
+    }
+    password_salts = {
+        'v8BMktHnOeokEBTy6As',
+        'c5d6v3NS97D3wYkUltFQ',
+        '2IcBeSh6IVVCJyZpqBt',
+        'QOqWQ24CMiRNuPUz8f5',
+        'uMYA6c3A7uGoI0aEbJ8R',
+    }
+
     for line in dump_sql.splitlines():
         new_line = obfuscator_object._parse_line(line=line)
         if new_line is not None:
-            result.add(new_line)
-
-    assert not (  # nosec
-        {'cj@example.com', 'leo@example.com', 'donna@example.com', 'charlie@example.com', 'fun@example.com'} & result
-    )
-    assert not (  # nosec
-        {
-            '86a97ff982e87ed5af7d90ab2ce31d4e89a3af3e6a0490b067bb8213aea7a4ee0eeafae1d8fe3c6f990aead095092fcf852004b18'
-            'e484ef22569aebf64c3747f',
-            '630aaf10f3edcb396181535476bccfd369e1ee9281cbc218d0861e6117b9839219cb403abed3b59468b2564c229d78b0cb610d0e1'
-            '6fa4a03dc4d93ed3d55deb3',
-            '06fa5d0f3a4d62ff60717ff3315301129a5bcd152f63f073b67d2e6a835b098524b1d097367283c97ca75db9154cf61d6a918248e'
-            'b68eaf8cd83d1a87cdd92dc',
-            '02cbd8d1e9690c7786375f9f6ec4da6fa3c2ead70d41a7aa1d7fe631477b42635210f0e8fa7579f6f4b5afdb364d9465623a2861e'
-            'cff75fa3a052c9b2a9fc2dd',
-            'b09909b6e83938dd41ffb5e931eeb3d646b1856dfb74a81acb1697b6d8466468047fe92286e011a4634c71b8d8775c7d5a31e19ce'
-            '111bd31d0a61a4faf93d6af',
-        }
-        & result
-    )
-    assert not (  # nosec
-        {
-            'v8BMktHnOeokEBTy6As',
-            'c5d6v3NS97D3wYkUltFQ',
-            '2IcBeSh6IVVCJyZpqBt',
-            'QOqWQ24CMiRNuPUz8f5',
-            'uMYA6c3A7uGoI0aEbJ8R',
-        }
-        & result
-    )
+            assert not any([email in new_line for email in emails])
+            assert not any([birthday in new_line for birthday in birthdays])
+            assert not any([token in new_line for token in tokens])
+            assert not any([password_salt in new_line for password_salt in password_salts])
 
 
 def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):

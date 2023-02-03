@@ -53,6 +53,14 @@ class Mutator:
         """Метод для формирования адреса"""
         return self._faker.address()
 
+    def mutation_date_past(self, **_) -> str:
+        """Метод для формирования даты в прошедшем времени"""
+        return self._faker.past_date(start_date='-50y').strftime('%Y-%m-%d')
+
+    def mutation_date_future(self, **_) -> str:
+        """Метод для формирования даты в будущем времени"""
+        return self._faker.future_date().strftime('%Y-%m-%d')
+
     def mutation_uri(self, **kwargs) -> str:
         """Метод для формирования uri"""
         max_length = kwargs.get('max_length', 2048)
