@@ -29,19 +29,33 @@ class Mutator:
         Метод для вставки значения из параметров
         :return: строка со значением
         """
-        return str(kwargs.get('value', ''))
+        return str(kwargs['value'])
+
+    def mutation_fio(self, **_) -> str:
+        """
+        Метод для формирования ФИО
+        :return: ФИО
+        """
+        return self._faker.name()
 
     def mutation_first_name(self, **_) -> str:
         """
-        Метод для формирования фамилии
-        :return:
+        Метод для формирования имени
+        :return: имя
         """
         return self._faker.first_name()
+
+    def mutation_middle_name(self, **_) -> str:
+        """
+        Метод для формирования отчества
+        :return: отчество
+        """
+        return self._faker.middle_name()
 
     def mutation_last_name(self, **_) -> str:
         """
         Метод для формирования фамилии
-        :return:
+        :return: фамилия
         """
         return self._faker.last_name()
 
