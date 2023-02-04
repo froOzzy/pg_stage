@@ -47,7 +47,7 @@ class Mutator:
 
     def mutation_middle_name(self, **_) -> str:
         """
-        Метод для формирования отчества
+        Метод для формирования отчества (работает только с ru_RU)
         :return: отчество
         """
         return self._faker.middle_name()
