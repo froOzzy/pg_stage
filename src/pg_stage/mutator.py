@@ -102,7 +102,7 @@ class Mutator:
 
     def mutation_ipv4_private(self, **_) -> str:
         """Метод для формирования приватного ip-адреса 4-й версии"""
-        return self._faker.ipv4()
+        return self._faker.ipv4_private()
 
     def mutation_ipv6(self, **_) -> str:
         """Метод для формирования ip-адреса 6-й версии"""
