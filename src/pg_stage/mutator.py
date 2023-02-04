@@ -31,7 +31,7 @@ class Mutator:
         """
         return str(kwargs['value'])
 
-    def mutation_fio(self, **_) -> str:
+    def mutation_full_name(self, **_) -> str:
         """
         Метод для формирования ФИО
         :return: ФИО
