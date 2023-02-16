@@ -201,6 +201,6 @@ class Obfuscator:
             stdin = sys.stdin
 
         for line in stdin:
-            new_line = self._parse_line(line=line)
+            new_line = self._parse_line(line=line.rstrip('\n'))
             if isinstance(new_line, str):
-                sys.stdout.write(new_line)
+                sys.stdout.write(new_line + '\n')
