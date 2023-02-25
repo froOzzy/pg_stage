@@ -11,13 +11,22 @@ from pg_stage.mutator import Mutator
 class Obfuscator:
     """Главный класс для работы с обфускатором"""
 
+    copy_parse_pattern = r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;'
+    comment_table_parse_pattern = r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;'
+    comment_column_parse_pattern = r'COMMENT ON COLUMN ([\d\w\_\.]+) IS \'anon: ([\w\W]*)\'\;'
+
     def __init__(
         self,
         delimiter: str = '\t',
         locale: str = 'en_US',
         delete_tables_by_pattern: Optional[List[str]] = None,
-    ):
-        """Метод инициализации класса"""
+    ) -> None:
+        """
+        Метод инициализации класса
+        :param delimiter: разделитель
+        :param locale: локализация для Faker
+        :param delete_tables_by_pattern: список таблиц, которые нужно очистить по паттерну
+        """
         self.delimiter = delimiter
         self.delete_tables_by_pattern = delete_tables_by_pattern
         if self.delete_tables_by_pattern is None:
@@ -35,6 +44,11 @@ class Obfuscator:
         self._is_delete = False
 
     def _prepare_variables(self, line: str) -> Optional[str]:
+        """
+        Метод для установки начальных значений основных переменных
+        :param line: строка sql
+        :return: строка sql
+        """
         self._is_data = False
         self._table_name = None
         self._table_columns = []
@@ -46,15 +60,15 @@ class Obfuscator:
         """
         Метод для обработки комментария колонки для составления карты
         :param line: строка sql
+        :return: строка sql
         """
-        pattern_for_comment = r'COMMENT ON COLUMN ([\d\w\_\.]+) IS \'anon: ([\w\W]*)\'\;'
-        result = re.search(pattern=pattern_for_comment, string=line)
+        result = re.search(pattern=self.comment_column_parse_pattern, string=line)
         if not result:
             return line
 
         try:
             mutation_params = json.loads(result.group(2))
-        except Exception:
+        except ValueError:
             return line
 
         mutation_name = mutation_params['mutation_name']
@@ -81,15 +95,15 @@ class Obfuscator:
         """
         Метод для обработки комментария таблицы
         :param line: строка sql
+        :return: строка sql
         """
-        pattern_for_comment = r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;'
-        result = re.search(pattern=pattern_for_comment, string=line)
+        result = re.search(pattern=self.comment_table_parse_pattern, string=line)
         if not result:
             return line
 
         try:
             mutation_params = json.loads(result.group(2))
-        except Exception:
+        except ValueError:
             return line
 
         mutation_name = mutation_params['mutation_name']
@@ -161,9 +175,10 @@ class Obfuscator:
         """
         Метод для обработки строк с COPY
         :param line: строка sql
+        :return: строка sql
         """
-        pattern = r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;'
-        result = re.search(pattern=pattern, string=line)
+
+        result = re.search(pattern=self.copy_parse_pattern, string=line)
         if not result:
             return
 
@@ -177,7 +192,11 @@ class Obfuscator:
         return line
 
     def _parse_line(self, line: str) -> Optional[str]:
-        """Метод для парсинга строки из дампа"""
+        """
+        Метод для парсинга строки из дампа
+        :param line: строка sql
+        :return: обработанная строка sql
+        """
         if line.startswith('\.'):
             return self._prepare_variables(line=line)
 
@@ -196,7 +215,10 @@ class Obfuscator:
         return line
 
     def run(self, stdin=None) -> None:
-        """Метод для запуска обфускации"""
+        """
+        Метод для запуска обфускации
+        :param stdin: поток, с которого приходит информация в виде строк sql
+        """
         if not stdin:
             stdin = sys.stdin
 
