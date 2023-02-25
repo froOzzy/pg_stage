@@ -1,8 +1,10 @@
+from typing import List, Dict
+
 from faker import Faker
 
 
 class Mutator:
-    """Класс с описанием основных методо для мутации значений полей"""
+    """Класс с описанием основных методов для мутации значений полей"""
 
     def __init__(self, locale: str = 'en_US'):
         """Метод инициализации"""
@@ -11,7 +13,7 @@ class Mutator:
     def mutation_email(self, **_) -> str:
         """
         Метод для создания фейкового email-а
-        :return: емейл
+        :return: email
         """
         return self._faker.email()
 
@@ -81,7 +83,8 @@ class Mutator:
         start_date - самая ранняя допустимая дата в strtotime() формате
         """
         start_date = kwargs.get('start_date', '-30d')
-        return self._faker.past_date(start_date=start_date).strftime('%Y-%m-%d')
+        date_format = kwargs.get('date_format', '%Y-%m-%d')
+        return self._faker.past_date(start_date=start_date).strftime(date_format)
 
     def mutation_future_date(self, **kwargs) -> str:
         """
@@ -89,7 +92,8 @@ class Mutator:
         end_date - самая поздняя допустимая дата в strtotime() формате
         """
         end_date = kwargs.get('end_date', '+30d')
-        return self._faker.future_date(end_date=end_date).strftime('%Y-%m-%d')
+        date_format = kwargs.get('date_format', '%Y-%m-%d')
+        return self._faker.future_date(end_date=end_date).strftime(date_format)
 
     def mutation_uri(self, **kwargs) -> str:
         """Метод для формирования uri"""

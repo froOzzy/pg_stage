@@ -30,7 +30,7 @@ COMMENT ON COLUMN table_1.first_name IS 'anon: {"mutation_name": "first_name"}';
 3. Run pg_dump and redirect the stream to the running script process:
 
 ```bash
-pg_dump -d database | python3 test_obf.py > dump.sql
+pg_dump -d database | python3 main.py > dump.sql
 ```
 
 4. After that you will get the obfuscated data in the table
