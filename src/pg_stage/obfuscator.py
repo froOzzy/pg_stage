@@ -6,6 +6,7 @@ from typing import Optional, List
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
+from pg_stage.typing import ConditionTypeMany
 
 
 class Obfuscator:
@@ -43,7 +44,7 @@ class Obfuscator:
         self._delete_tables = set()
         self._is_delete = False
 
-    def _prepare_variables(self, line: str) -> Optional[str]:
+    def _prepare_variables(self, *, line: str) -> Optional[str]:
         """
         Метод для установки начальных значений основных переменных
         :param line: строка sql
@@ -55,6 +56,39 @@ class Obfuscator:
         self._enumerate_table_columns = {}
         self._is_delete = False
         return line
+
+    def _checking_conditions(self, *, conditions: ConditionTypeMany, table_values: List[str]) -> bool:
+        """
+        Метод для проверки условий обфускации
+        :param conditions: условия
+        :param table_values: значения вставляемой строки из дампа
+        :return: флаг об выполнение обфускации для столбца
+        """
+        if not conditions:
+            return True
+
+        flag = False
+        for condition in conditions:
+            column_name = condition['column_name']
+            operation = condition['operation']
+            value = condition['value']
+
+            column_value = table_values[self._enumerate_table_columns[column_name]]
+            if operation == 'equal':
+                flag = column_value == value
+                continue
+
+            if operation == 'not_equal':
+                flag = column_value != value
+                continue
+
+            if operation == 'by_pattern':
+                flag = re.search(pattern=value, string=column_value) is not None
+                continue
+
+            raise ValueError('Invalid condition operation')
+
+        return flag
 
     def _parse_comment_column(self, line: str) -> str:
         """
@@ -82,16 +116,16 @@ class Obfuscator:
             schema, table_name, column_name = result.group(1).split('.')
             table_name = f'{schema}.{table_name}'
 
-        mutation_relations = mutation_params.get('relations', [])
         self._map_tables[table_name][column_name] = {
             'mutation_name': mutation_name,
             'mutation_func': mutation_func,
             'mutation_kwargs': mutation_params.get('mutation_kwargs', {}),
-            'mutation_relations': mutation_relations,
+            'mutation_relations': mutation_params.get('relations', []),
+            'mutation_conditions': mutation_params.get('conditions', []),
         }
         return line
 
-    def _parse_comment_table(self, line: str) -> str:
+    def _parse_comment_table(self, *, line: str) -> str:
         """
         Метод для обработки комментария таблицы
         :param line: строка sql
@@ -112,7 +146,7 @@ class Obfuscator:
 
         return line
 
-    def _prepared_data(self, line: str) -> Optional[str]:
+    def _prepared_data(self, *, line: str) -> Optional[str]:
         """
         Метод для обработки данных
         :return: новая строка с данными
@@ -135,6 +169,11 @@ class Obfuscator:
             mutation_func = mutation_for_column['mutation_func']
             mutation_kwargs = mutation_for_column['mutation_kwargs']
             mutation_relations = mutation_for_column['mutation_relations']
+            mutation_conditions = mutation_for_column['mutation_conditions']
+            if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
+                result.append(table_values[index])
+                continue
+
             if not mutation_relations:
                 result.append(mutation_func(**mutation_kwargs))
                 continue
@@ -171,7 +210,7 @@ class Obfuscator:
 
         return self.delimiter.join(result)
 
-    def _parse_copy_values(self, line: str) -> Optional[str]:
+    def _parse_copy_values(self, *, line: str) -> Optional[str]:
         """
         Метод для обработки строк с COPY
         :param line: строка sql
