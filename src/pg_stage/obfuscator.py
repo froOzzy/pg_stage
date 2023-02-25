@@ -121,7 +121,7 @@ class Obfuscator:
             'mutation_func': mutation_func,
             'mutation_kwargs': mutation_params.get('mutation_kwargs', {}),
             'mutation_relations': mutation_params.get('relations', []),
-            'mutation_conditions': mutation_params.get('conditions', [])
+            'mutation_conditions': mutation_params.get('conditions', []),
         }
         return line
 
