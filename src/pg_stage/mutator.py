@@ -10,7 +10,7 @@ def unique_object(function):
     @functools.wraps(function)
     def wrapper(self, *args, **kwargs) -> str:
         """Обработчик декоратора"""
-        result = function(*args, **kwargs)
+        result = function(self, *args, **kwargs)
         if not kwargs.get('unique'):
             return result
 
@@ -20,7 +20,7 @@ def unique_object(function):
                 raise ValueError('Recursion limit exceeded')
 
             recursion_count += 1
-            result = function(*args, **kwargs)
+            result = function(self, *args, **kwargs)
 
         return result
 
