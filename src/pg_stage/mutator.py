@@ -8,6 +8,7 @@ class Mutator:
     """Класс с описанием основных методов для мутации значений полей"""
 
     unique_objects = set()
+    max_count_recursion = 20
 
     def __init__(self, locale: str = 'en_US'):
         """Метод инициализации"""
@@ -24,7 +25,12 @@ class Mutator:
             if not kwargs.get('unique'):
                 return result
 
+            recursion_count = 0
             while result in self.unique_objects:
+                if recursion_count > self.max_count_recursion:
+                    raise ValueError('Recursion limit exceeded')
+
+                recursion_count += 1
                 result = function(*args, **kwargs)
 
             return result
