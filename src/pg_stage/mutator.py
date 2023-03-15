@@ -1,3 +1,4 @@
+import functools
 from typing import List, Dict
 
 from faker import Faker
@@ -11,6 +12,24 @@ class Mutator:
     def __init__(self, locale: str = 'en_US'):
         """Метод инициализации"""
         self._faker = Faker(locale=locale)
+
+    @staticmethod
+    def _unique_object(function):
+        """Декоратор для формирования уникального значения"""
+
+        @functools.wraps(function)
+        def wrapper(self, *args, **kwargs) -> str:
+            """Обработчик декоратора"""
+            result = function(*args, **kwargs)
+            if not kwargs.get('unique'):
+                return result
+
+            while result in self.unique_objects:
+                result = function(*args, **kwargs)
+
+            return result
+
+        return wrapper
 
     def mutation_email(self, **_) -> str:
         """
