@@ -6,6 +6,8 @@ from faker import Faker
 class Mutator:
     """Класс с описанием основных методов для мутации значений полей"""
 
+    unique_objects = set()
+
     def __init__(self, locale: str = 'en_US'):
         """Метод инициализации"""
         self._faker = Faker(locale=locale)
@@ -71,7 +73,15 @@ class Mutator:
 
     def mutation_phone_number(self, **kwargs) -> str:
         """Метод для формирования номера телефона"""
-        return self._faker.numerify(kwargs['format'])
+        format = kwargs['format']
+        phone_number = self._faker.numerify(format)
+        if kwargs.get('unique', False):
+            while phone_number in self.unique_objects:
+                phone_number = self._faker.numerify(format)
+
+            self.unique_objects.add(phone_number)
+
+        return phone_number
 
     def mutation_address(self, **_) -> str:
         """Метод для формирования адреса"""
