@@ -69,6 +69,9 @@ class Obfuscator:
 
         flag = False
         for condition in conditions:
+            if flag:
+                break
+
             column_name = condition['column_name']
             operation = condition['operation']
             value = condition['value']
