@@ -87,10 +87,11 @@ class Mutator:
 
     def mutation_phone_number(self, **kwargs) -> str:
         """Метод для формирования номера телефона"""
+        format = kwargs['format']
         if kwargs.get('unique'):
-            return self._faker.unique.numerify(kwargs['format'])
+            return self._faker.unique.numerify(format)
 
-        return self._faker.numerify(kwargs['format'])
+        return self._faker.numerify(format)
 
     def mutation_address(self, **kwargs) -> str:
         """Метод для формирования адреса"""
