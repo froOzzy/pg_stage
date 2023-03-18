@@ -93,7 +93,7 @@ class Obfuscator:
 
         return flag
 
-    def _parse_comment_column(self, line: str) -> str:
+    def _parse_comment_column(self, *, line: str) -> str:
         """
         Метод для обработки комментария колонки для составления карты
         :param line: строка sql
@@ -249,7 +249,7 @@ class Obfuscator:
         self._is_data = True
         return line
 
-    def _parse_line(self, line: str) -> Optional[str]:
+    def _parse_line(self, *, line: str) -> Optional[str]:
         """
         Метод для парсинга строки из дампа
         :param line: строка sql
@@ -272,7 +272,7 @@ class Obfuscator:
 
         return line
 
-    def run(self, stdin=None) -> None:
+    def run(self, *, stdin=None) -> None:
         """
         Метод для запуска обфускации
         :param stdin: поток, с которого приходит информация в виде строк sql
