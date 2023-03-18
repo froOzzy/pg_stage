@@ -10,7 +10,7 @@ from pg_stage.typing import ConditionTypeMany
 
 
 class Obfuscator:
-    """Главный класс для работы с обфускатором"""
+    """Главный класс для работы с обфускатором."""
 
     copy_parse_pattern = r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;'
     comment_table_parse_pattern = r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;'
@@ -23,7 +23,7 @@ class Obfuscator:
         delete_tables_by_pattern: Optional[List[str]] = None,
     ) -> None:
         """
-        Метод инициализации класса
+        Метод инициализации класса.
         :param delimiter: разделитель
         :param locale: локализация для Faker
         :param delete_tables_by_pattern: список таблиц, которые нужно очистить по паттерну
@@ -46,7 +46,7 @@ class Obfuscator:
 
     def _prepare_variables(self, *, line: str) -> Optional[str]:
         """
-        Метод для установки начальных значений основных переменных
+        Метод для установки начальных значений основных переменных.
         :param line: строка sql
         :return: строка sql
         """
@@ -59,7 +59,7 @@ class Obfuscator:
 
     def _checking_conditions(self, *, conditions: ConditionTypeMany, table_values: List[str]) -> bool:
         """
-        Метод для проверки условий обфускации
+        Метод для проверки условий обфускации.
         :param conditions: условия
         :param table_values: значения вставляемой строки из дампа
         :return: флаг об выполнение обфускации для столбца
@@ -95,7 +95,7 @@ class Obfuscator:
 
     def _parse_comment_column(self, *, line: str) -> str:
         """
-        Метод для обработки комментария колонки для составления карты
+        Метод для обработки комментария колонки для составления карты.
         :param line: строка sql
         :return: строка sql
         """
@@ -135,7 +135,7 @@ class Obfuscator:
 
     def _parse_comment_table(self, *, line: str) -> str:
         """
-        Метод для обработки комментария таблицы
+        Метод для обработки комментария таблицы.
         :param line: строка sql
         :return: строка sql
         """
@@ -156,7 +156,7 @@ class Obfuscator:
 
     def _prepared_data(self, *, line: str) -> Optional[str]:
         """
-        Метод для обработки данных
+        Метод для обработки данных.
         :return: новая строка с данными
         """
         if self._is_delete:
@@ -231,7 +231,7 @@ class Obfuscator:
 
     def _parse_copy_values(self, *, line: str) -> Optional[str]:
         """
-        Метод для обработки строк с COPY
+        Метод для обработки строк с COPY.
         :param line: строка sql
         :return: строка sql
         """
@@ -251,7 +251,7 @@ class Obfuscator:
 
     def _parse_line(self, *, line: str) -> Optional[str]:
         """
-        Метод для парсинга строки из дампа
+        Метод для парсинга строки из дампа.
         :param line: строка sql
         :return: обработанная строка sql
         """
@@ -274,7 +274,7 @@ class Obfuscator:
 
     def run(self, *, stdin=None) -> None:
         """
-        Метод для запуска обфускации
+        Метод для запуска обфускации.
         :param stdin: поток, с которого приходит информация в виде строк sql
         """
         if not stdin:
