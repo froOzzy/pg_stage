@@ -3,6 +3,14 @@
 A utility for generating a database dump, the data in which will be obfuscated. This dump can be used in development and 
 stage servers without fear of their theft.
 
+## Content
+
+- [How does it work?](#how-does-it-work)
+- [Usage example](#usage-example)
+- [Supported types of obfuscation](#supported-types-of-obfuscation)
+- [Why did I write my utility?](#why-did-i-write-my-utility)
+- [Thanks for the inspiration](#thanks-for-the-inspiration)
+
 ## How does it work?
 
 The utility processes the output of the pg_dump command line by line and decides whether to obfuscate data at the level 
@@ -24,7 +32,7 @@ obfuscator.run()
 2. Add comments to a column or table:
 
 ```sql
-COMMENT ON COLUMN table_1.first_name IS 'anon: {"mutation_name": "first_name"}';
+COMMENT ON COLUMN table_1.first_name IS 'anon: [{"mutation_name": "first_name"}]';
 ```
 
 3. Run pg_dump and redirect the stream to the running script process:
@@ -37,7 +45,7 @@ pg_dump -d database | python3 main.py > dump.sql
 
 ## Supported types of obfuscation
 
-You can see the current list [here](src/pg_stage/mutator.py).
+You can see the current list [here](https://github.com/froOzzy/pg_stage/blob/main/src/pg_stage/mutator.py).
 
 ## Why did I write my utility?
 
@@ -51,7 +59,7 @@ by a foreign key.
 Example:
 
 ```sql
-COMMENT ON COLUMN table_1.first_name IS 'anon: {"mutation_name": "first_name", "relations": [{"table_name": "table_1", "column_name": "last_name", "from_column_name": "id", "to_column_name": "id"}]}';
+COMMENT ON COLUMN table_1.first_name IS 'anon: [{"mutation_name": "first_name", "relations": [{"table_name": "table_1", "column_name": "last_name", "from_column_name": "id", "to_column_name": "id"}]}]';
 ```
 
 where `relations` - links on tables where it is necessary to obfuscate fields according to the current field.
