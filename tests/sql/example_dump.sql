@@ -171,7 +171,7 @@ ALTER TABLE auth_user_replica OWNER TO postgres;
 -- Name: COLUMN auth_users.email; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_user_replica.email IS 'anon: {"mutation_name": "email", "relations": [{"table_name": "auth_users", "column_name": "email", "from_column_name": "uuid", "to_column_name": "id"}]}';
+COMMENT ON COLUMN auth_user_replica.email IS 'anon: [{"mutation_name": "email", "relations": [{"table_name": "auth_users", "column_name": "email", "from_column_name": "uuid", "to_column_name": "id"}]}]';
 
 
 COPY auth_user_replica (uuid, email, crypted_password, password_salt, persistence_token, created_at, updated_at, active, first_name, last_name, agency_id, phone, perishable_token, extension, commissioned, region, division, location, last_request_at) FROM stdin;
@@ -216,7 +216,7 @@ ALTER TABLE auth_users OWNER TO postgres;
 -- Name: COLUMN auth_users.email; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.email IS 'anon: {"mutation_name": "email", "relations": [{"table_name": "auth_user_replica", "column_name": "email", "from_column_name": "id", "to_column_name": "uuid"}]}';
+COMMENT ON COLUMN auth_users.email IS 'anon: [{"mutation_name": "email", "relations": [{"table_name": "auth_user_replica", "column_name": "email", "from_column_name": "id", "to_column_name": "uuid"}]}]';
 
 --
 -- Name: COLUMN auth_users.crypted_password; Type: COMMENT; Schema: public; Owner: postgres
@@ -232,35 +232,35 @@ COMMENT ON COLUMN auth_users.email IS 'anon: {"mutation_name": "email", "relatio
 -- Name: COLUMN auth_users.persistence_token; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.persistence_token IS 'anon: {"mutation_name": "empty_string"}';
+COMMENT ON COLUMN auth_users.persistence_token IS 'anon: [{"mutation_name": "empty_string"}]';
 
 
 --
 -- Name: COLUMN auth_users.first_name; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.first_name IS 'anon: {"mutation_name": "first_name"}';
+COMMENT ON COLUMN auth_users.first_name IS 'anon: [{"mutation_name": "first_name"}]';
 
 
 --
 -- Name: COLUMN auth_users.last_name; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.last_name IS 'anon: {"mutation_name": "last_name"}';
+COMMENT ON COLUMN auth_users.last_name IS 'anon: [{"mutation_name": "last_name"}]';
 
 
 --
 -- Name: COLUMN auth_users.phone; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.phone IS 'anon: {"mutation_name": "phone_number", "mutation_kwargs": {"format": "79#########"}}';
+COMMENT ON COLUMN auth_users.phone IS 'anon: [{"mutation_name": "phone_number", "mutation_kwargs": {"format": "79#########"}}]';
 
 
 --
 -- Name: COLUMN auth_users.perishable_token; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.perishable_token IS 'anon: {"mutation_name": "empty_string"}';
+COMMENT ON COLUMN auth_users.perishable_token IS 'anon: [{"mutation_name": "empty_string"}]';
 
 --
 -- Data for Name: auth_users; Type: TABLE DATA; Schema: public; Owner: postgres

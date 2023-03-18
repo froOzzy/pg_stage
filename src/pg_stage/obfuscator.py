@@ -104,28 +104,33 @@ class Obfuscator:
             return line
 
         try:
-            mutation_params = json.loads(result.group(2))
+            mutations_params = json.loads(result.group(2))
         except ValueError:
             return line
 
-        mutation_name = mutation_params['mutation_name']
-        mutation_func = getattr(self._mutator, f'mutation_{mutation_name}', None)
-        if not mutation_func:
-            raise ValueError(f'Not found mutation {mutation_name}.')
+        for mutation_params in mutations_params:
+            mutation_name = mutation_params['mutation_name']
+            mutation_func = getattr(self._mutator, f'mutation_{mutation_name}', None)
+            if not mutation_func:
+                raise ValueError(f'Not found mutation {mutation_name}.')
 
-        try:
-            table_name, column_name = result.group(1).split('.')
-        except ValueError:
-            schema, table_name, column_name = result.group(1).split('.')
-            table_name = f'{schema}.{table_name}'
+            try:
+                table_name, column_name = result.group(1).split('.')
+            except ValueError:
+                schema, table_name, column_name = result.group(1).split('.')
+                table_name = f'{schema}.{table_name}'
 
-        self._map_tables[table_name][column_name] = {
-            'mutation_name': mutation_name,
-            'mutation_func': mutation_func,
-            'mutation_kwargs': mutation_params.get('mutation_kwargs', {}),
-            'mutation_relations': mutation_params.get('relations', []),
-            'mutation_conditions': mutation_params.get('conditions', []),
-        }
+            self._map_tables[table_name].setdefault(column_name, [])
+            self._map_tables[table_name][column_name].append(
+                {
+                    'mutation_name': mutation_name,
+                    'mutation_func': mutation_func,
+                    'mutation_kwargs': mutation_params.get('mutation_kwargs', {}),
+                    'mutation_relations': mutation_params.get('relations', []),
+                    'mutation_conditions': mutation_params.get('conditions', []),
+                },
+            )
+
         return line
 
     def _parse_comment_table(self, *, line: str) -> str:
@@ -163,53 +168,64 @@ class Obfuscator:
 
         result = []
         table_values = line.split(self.delimiter)
-        for column_name, index in self._enumerate_table_columns.items():
-            mutation_for_column = table_mutations_by_column.get(column_name)
-            if not mutation_for_column:
-                result.append(table_values[index])
+        for column_name, column_index in self._enumerate_table_columns.items():
+            mutations_for_column = table_mutations_by_column.get(column_name)
+            if not mutations_for_column:
+                result.append(table_values[column_index])
                 continue
 
-            mutation_func = mutation_for_column['mutation_func']
-            mutation_kwargs = mutation_for_column['mutation_kwargs']
-            mutation_relations = mutation_for_column['mutation_relations']
-            mutation_conditions = mutation_for_column['mutation_conditions']
-            if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
-                result.append(table_values[index])
-                continue
+            is_obfuscated = False
+            len_mutations_for_column = len(mutations_for_column)
+            for mutation_index, mutation_for_column in enumerate(mutations_for_column):
+                if is_obfuscated:
+                    break
 
-            if not mutation_relations:
-                result.append(mutation_func(**mutation_kwargs))
-                continue
+                mutation_func = mutation_for_column['mutation_func']
+                mutation_kwargs = mutation_for_column['mutation_kwargs']
+                mutation_relations = mutation_for_column['mutation_relations']
+                mutation_conditions = mutation_for_column['mutation_conditions']
+                if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
+                    if mutation_index + 1 == len_mutations_for_column:
+                        result.append(table_values[column_index])
+                        break
 
-            new_value = None
-            for mutation_relation in mutation_relations:
-                key_table = f'{mutation_relation["table_name"]}:{mutation_relation["column_name"]}'
-                from_column_name = mutation_relation['from_column_name']
-                to_column_name = mutation_relation['to_column_name']
-                relation_key_value = table_values[self._enumerate_table_columns[from_column_name]]
-                relation_fk = self._relation_fk.get(key_table, {}).get(to_column_name, {}).get(relation_key_value)
-                if not relation_fk:
                     continue
 
-                new_value = self._relation_values.get(relation_fk)
-                if new_value is None:
-                    raise ValueError('Invalid relation fk!')
+                if not mutation_relations:
+                    is_obfuscated = True
+                    result.append(mutation_func(**mutation_kwargs))
+                    continue
 
-                break
-
-            if new_value is None:
-                relation_fk = str(uuid4())
-                new_value = mutation_func(**mutation_kwargs)
+                new_value = None
                 for mutation_relation in mutation_relations:
-                    key_table = f'{self._table_name}:{column_name}'
+                    key_table = f'{mutation_relation["table_name"]}:{mutation_relation["column_name"]}'
                     from_column_name = mutation_relation['from_column_name']
+                    to_column_name = mutation_relation['to_column_name']
                     relation_key_value = table_values[self._enumerate_table_columns[from_column_name]]
-                    self._relation_fk[key_table].setdefault(from_column_name, {})
-                    self._relation_fk[key_table][from_column_name][relation_key_value] = relation_fk
+                    relation_fk = self._relation_fk.get(key_table, {}).get(to_column_name, {}).get(relation_key_value)
+                    if not relation_fk:
+                        continue
 
-                self._relation_values[relation_fk] = new_value
+                    new_value = self._relation_values.get(relation_fk)
+                    if new_value is None:
+                        raise ValueError('Invalid relation fk!')
 
-            result.append(new_value)
+                    break
+
+                if new_value is None:
+                    relation_fk = str(uuid4())
+                    new_value = mutation_func(**mutation_kwargs)
+                    for mutation_relation in mutation_relations:
+                        key_table = f'{self._table_name}:{column_name}'
+                        from_column_name = mutation_relation['from_column_name']
+                        relation_key_value = table_values[self._enumerate_table_columns[from_column_name]]
+                        self._relation_fk[key_table].setdefault(from_column_name, {})
+                        self._relation_fk[key_table][from_column_name][relation_key_value] = relation_fk
+
+                    self._relation_values[relation_fk] = new_value
+
+                result.append(new_value)
+                is_obfuscated = True
 
         return self.delimiter.join(result)
 

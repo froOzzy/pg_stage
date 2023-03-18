@@ -1,6 +1,3 @@
-import functools
-from typing import List, Dict
-
 from faker import Faker
 
 
