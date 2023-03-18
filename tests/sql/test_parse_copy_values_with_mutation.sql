@@ -1,4 +1,4 @@
-COMMENT ON COLUMN table_1.persistence_token IS 'anon: {"mutation_name": "empty_string"}';
+COMMENT ON COLUMN table_1.persistence_token IS 'anon: [{"mutation_name": "empty_string"}]';
 COMMENT ON COLUMN table_1.crypted_password IS 'anon: [{"mutation_name": "fixed_value", "mutation_kwargs": {"value": "400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504"}}]';
 
 COPY table_1 (id, crypted_password, persistence_token) FROM stdin;
@@ -9,10 +9,10 @@ f7bd4a7f-b63f-41c3-83bd-9683f33bb4b3	400$8$50$8368e20d878ef1b1$b271e3af024b424b7
 abe9fd39-f0b3-4ec6-9006-9783fbdade07	400$8$50$ef1eb813f8d8b99d$2932a9dc75d10f13525e43c29726061d99b4ebdff2e9f9951eb6e2393f36d221	b09909b6e83938dd41ffb5e931eeb3d646b1856dfb74a81acb1697b6d8466468047fe92286e011a4634c71b8d8775c7d5a31e19ce111bd31d0a61a4faf93d6af
 \.
 
-COMMENT ON COLUMN schema.table_1.email IS 'anon: {"mutation_name": "email"}';
-COMMENT ON COLUMN schema.table_1.password_salt IS 'anon: {"mutation_name": "null"}';
-COMMENT ON COLUMN schema.table_1.dt_birthday IS 'anon: {"mutation_name": "past_date"}';
-COMMENT ON COLUMN schema.table_1.crypted_password IS 'anon: {"mutation_name": "fixed_value", "mutation_kwargs": {"value": "400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504"}}';
+COMMENT ON COLUMN schema.table_1.email IS 'anon: [{"mutation_name": "email"}]';
+COMMENT ON COLUMN schema.table_1.password_salt IS 'anon: [{"mutation_name": "null"}]';
+COMMENT ON COLUMN schema.table_1.dt_birthday IS 'anon: [{"mutation_name": "past_date"}]';
+COMMENT ON COLUMN schema.table_1.crypted_password IS 'anon: [{"mutation_name": "fixed_value", "mutation_kwargs": {"value": "400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504"}}]';
 
 COPY schema.table_1 (id, email, crypted_password, dt_birthday) FROM stdin;
 07750c56-fb37-46e1-b7b6-da530704c056	cj@example.com	400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3255d3bd1edd18ffc4a8092e2616b9e5ca7954b2c52504	1996-10-02
