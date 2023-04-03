@@ -108,8 +108,8 @@ class Obfuscator:
         except ValueError:
             return line
 
-        for mutation_params in mutations_params:
-            mutation_name = mutation_params['mutation_name']
+        for mutation_param in mutations_params:
+            mutation_name = mutation_param['mutation_name']
             mutation_func = getattr(self._mutator, f'mutation_{mutation_name}', None)
             if not mutation_func:
                 raise ValueError(f'Not found mutation {mutation_name}.')
@@ -125,9 +125,9 @@ class Obfuscator:
                 {
                     'mutation_name': mutation_name,
                     'mutation_func': mutation_func,
-                    'mutation_kwargs': mutation_params.get('mutation_kwargs', {}),
-                    'mutation_relations': mutation_params.get('relations', []),
-                    'mutation_conditions': mutation_params.get('conditions', []),
+                    'mutation_kwargs': mutation_param.get('mutation_kwargs', {}),
+                    'mutation_relations': mutation_param.get('relations', []),
+                    'mutation_conditions': mutation_param.get('conditions', []),
                 },
             )
 
