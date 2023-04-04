@@ -123,3 +123,31 @@ def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator):
     ]
     assert prepared_result[0][0] == prepared_result[0][1]  # nosec
     assert prepared_result[1][0] == prepared_result[1][1]  # nosec
+
+
+def test_two_mutation_for_one_column(obfuscator_object: Obfuscator):
+    """
+    Arrange: Дамп таблицы, в которой необходимо мутировать данные с двумя видами мутации
+    Act: Вызов функции `_parse_line` класса Obfuscator
+    Assert: В stdout данные поля мутированы
+    """
+    with open('tests/sql/test_two_mutation_for_one_column.sql') as file:
+        dump_sql = file.read()
+
+    result = []
+    for line in dump_sql.splitlines():
+        new_line = obfuscator_object._parse_line(line=line)
+        if new_line is not None:
+            result.append(new_line)
+
+    prepared_result = [
+        line.split('\t')[1:]
+        for line in result
+        if '20f654fe-b27d-4051-9fd4-000000000001' in line or
+           '20f654fe-b27d-4051-9fd4-000000000002' in line or
+           '20f654fe-b27d-4051-9fd4-000000000003' in line
+    ]
+
+    assert prepared_result[0][0] != '79999999999'  # nosec
+    assert prepared_result[1][0] != 'test@mail.ru'  # nosec
+    assert prepared_result[2][0] != '89999999999'  # nosec
