@@ -255,7 +255,7 @@ class Obfuscator:
         :param line: строка sql
         :return: обработанная строка sql
         """
-        if line.startswith('\.'):
+        if line.startswith('\\.'):
             return self._prepare_variables(line=line)
 
         if self._is_data:

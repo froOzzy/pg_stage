@@ -143,9 +143,9 @@ def test_two_mutation_for_one_column(obfuscator_object: Obfuscator):
     prepared_result = [
         line.split('\t')[1:]
         for line in result
-        if '20f654fe-b27d-4051-9fd4-000000000001' in line or
-           '20f654fe-b27d-4051-9fd4-000000000002' in line or
-           '20f654fe-b27d-4051-9fd4-000000000003' in line
+        if '20f654fe-b27d-4051-9fd4-000000000001' in line
+        or '20f654fe-b27d-4051-9fd4-000000000002' in line
+        or '20f654fe-b27d-4051-9fd4-000000000003' in line
     ]
 
     assert prepared_result[0][0] != '79999999999'  # nosec
