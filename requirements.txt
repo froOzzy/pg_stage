@@ -1,5 +1,0 @@
-Faker>=16.6.0
-pytest
-black
-bandit
-typing-extensions>=4.5.0
