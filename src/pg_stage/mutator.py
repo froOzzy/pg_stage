@@ -1,4 +1,5 @@
-from typing import Any, Union
+import random
+from typing import Any, Union, List
 
 from faker import Faker
 
@@ -205,3 +206,17 @@ class Mutator:
             return self._faker.unique.ipv6()
 
         return self._faker.ipv6()
+
+    @staticmethod
+    def mutation_random_choice(**kwargs: List[str]) -> str:
+        """
+        Метод для формирования случайного значения из списка
+        :param kwargs:
+            choices - список значений
+        :return: случайное значение
+        """
+        choices = kwargs.get('choices', [])
+        if not choices:
+            raise ValueError('Key choices not found!')
+
+        return str(random.choice(seq=choices))
