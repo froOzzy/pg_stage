@@ -17,4 +17,4 @@ jobs:
         run: poetry install
 
       - name: Run black
-        run: black . --diff --check --verbose
+        run: poetry run black . --diff --check --verbose

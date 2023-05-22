@@ -17,4 +17,4 @@ jobs:
         run: poetry install
 
       - name: Run bandit
-        run: bandit -r $(pwd)
+        run: poetry run bandit -r $(pwd)
