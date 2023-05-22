@@ -10,8 +10,11 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v2
 
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
       - name: Install dependencies
-        run: pip3 install -r requirements.txt
+        run: poetry install
 
       - name: Install pg-stage
         run: python3 setup.py install --user

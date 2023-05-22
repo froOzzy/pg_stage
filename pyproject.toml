@@ -26,3 +26,13 @@ line-length = 120
 target-version = ["py39"]
 include = '\.pyi?$'
 skip-string-normalization = true
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+Faker = ">=16.6.0"
+typing-extensions = ">=4.5.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "7.3.1"
+black = "23.3.0"
+bandit = "1.7.5"
