@@ -1,3 +1,9 @@
+[tool.poetry]
+name = "pg_stage"
+version = "0.1.14"
+description = "Anonymization of data in pg_dump"
+authors = ["froOzzy"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
