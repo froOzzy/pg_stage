@@ -208,7 +208,7 @@ class Mutator:
         return self._faker.ipv6()
 
     @staticmethod
-    def mutation_random_choice(**kwargs: List[str]) -> str:
+    def mutation_random_choice(**kwargs: List[Any]) -> str:
         """
         Метод для формирования случайного значения из списка
         :param kwargs:
