@@ -219,4 +219,4 @@ class Mutator:
         if not choices:
             raise ValueError('Key choices not found!')
 
-        return str(random.choice(seq=choices))
+        return str(random.choice(seq=choices))  # nosec
