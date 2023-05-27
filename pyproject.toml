@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pg_stage"
-version = "0.1.15"
+version = "0.1.16"
 description = "Anonymization of data in pg_dump"
 authors = ["froOzzy"]
 
@@ -10,13 +10,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pg_stage"
-version = "0.1.15"
+version = "0.1.16"
 authors = [
   { name="froOzzy", email="ieme5gll6u78@mail.ru" },
 ]
 description = "Anonymization of data in pg_dump"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -34,7 +34,7 @@ include = '\.pyi?$'
 skip-string-normalization = true
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.7"
 Faker = ">=16.6.0"
 typing-extensions = ">=4.5.0"
 
