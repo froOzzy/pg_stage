@@ -7,6 +7,19 @@ from faker import Faker
 class Mutator:
     """Класс с описанием основных методов для мутации значений полей."""
 
+    min_value_smallint = -32768
+    max_value_smallint = -32767
+    min_value_integer = -2147483648
+    max_value_integer = 2147483647
+    min_value_bigint = -9223372036854775808
+    max_value_bigint = 9223372036854775807
+    min_value_smallserial = 1
+    max_value_smallserial = 32767
+    min_value_serial = 1
+    max_value_serial = 2147483647
+    min_value_bigserial = 1
+    max_value_bigserial = 9223372036854775807
+
     def __init__(self, locale: str = 'en_US') -> None:
         """
         Метод инициализации класса.
@@ -221,7 +234,25 @@ class Mutator:
 
         return str(random.choice(seq=choices))  # nosec
 
-    def mutation_integer(self, **kwargs: int) -> str:
+    def mutation_numeric_smallint(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата smallint
+        :param kwargs:
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        min_value = kwargs.get('min_value', self.min_value_smallint)
+        max_value = kwargs.get('max_value', self.max_value_smallint)
+        if min_value < self.min_value_smallint or max_value > self.max_value_smallint:
+            raise ValueError(
+                f'The min_value and max_value values must be between {self.min_value_smallint} '
+                f'and {self.max_value_smallint}',
+            )
+
+        return str(self._faker.random_int(min=min_value, max=max_value))
+
+    def mutation_numeric_integer(self, **kwargs: int) -> str:
         """
         Метод для формирования случайного числа формата int
         :param kwargs:
@@ -229,6 +260,150 @@ class Mutator:
             max_value - максимальное значение
         :return: случайное значение в пределах [min_value, max_value]
         """
-        min_value = kwargs.get('min_value', 0)
-        max_value = kwargs.get('max_value', 9999)
+        min_value = kwargs.get('min_value', self.min_value_integer)
+        max_value = kwargs.get('max_value', self.max_value_integer)
+        if min_value < self.min_value_integer or max_value > self.max_value_integer:
+            raise ValueError(
+                f'The min_value and max_value values must be between {self.min_value_integer} '
+                f'and {self.max_value_integer}',
+            )
+
+        return str(self._faker.random_int(min=min_value, max=max_value))
+
+    def mutation_numeric_bigint(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата bigint
+        :param kwargs:
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        min_value = kwargs.get('min_value', self.min_value_bigint)
+        max_value = kwargs.get('max_value', self.max_value_bigint)
+        if min_value < self.min_value_bigint or max_value > self.max_value_bigint:
+            raise ValueError(
+                f'The min_value and max_value values must be between {self.min_value_bigint} '
+                f'and {self.max_value_bigint}',
+            )
+
+        return str(self._faker.random_int(min=min_value, max=max_value))
+
+    def mutation_numeric_decimal(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата decimal
+        :param kwargs:
+            left_digits - количество символов до запятой
+            right_digits - количество символов после запятой
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        left_digits = kwargs['left_digits']
+        right_digits = kwargs['right_digits']
+        min_value = kwargs['min_value']
+        max_value = kwargs['max_value']
+        return str(
+            self._faker.pydecimal(
+                left_digits=left_digits,
+                right_digits=right_digits,
+                min_value=min_value,
+                max_value=max_value,
+            ),
+        )
+
+    def mutation_numeric_real(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата real
+        :param kwargs:
+            left_digits - количество символов до запятой
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        left_digits = kwargs['left_digits']
+        min_value = kwargs['min_value']
+        max_value = kwargs['max_value']
+        return str(
+            self._faker.pydecimal(
+                left_digits=left_digits,
+                right_digits=6,
+                min_value=min_value,
+                max_value=max_value,
+            ),
+        )
+
+    def mutation_numeric_double_precision(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата double precision
+        :param kwargs:
+            left_digits - количество символов до запятой
+            right_digits - количество символов после запятой
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        left_digits = kwargs['left_digits']
+        min_value = kwargs['min_value']
+        max_value = kwargs['max_value']
+        return str(
+            self._faker.pydecimal(
+                left_digits=left_digits,
+                right_digits=15,
+                min_value=min_value,
+                max_value=max_value,
+            ),
+        )
+
+    def mutation_numeric_smallserial(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата smallserial
+        :param kwargs:
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        min_value = kwargs.get('min_value', self.min_value_smallserial)
+        max_value = kwargs.get('max_value', self.max_value_smallserial)
+        if min_value < self.min_value_smallserial or max_value > self.max_value_smallserial:
+            raise ValueError(
+                f'The min_value and max_value values must be between {self.min_value_smallserial} '
+                f'and {self.max_value_smallserial}',
+            )
+
+        return str(self._faker.random_int(min=min_value, max=max_value))
+
+    def mutation_numeric_serial(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата serial
+        :param kwargs:
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        min_value = kwargs.get('min_value', self.min_value_serial)
+        max_value = kwargs.get('max_value', self.max_value_serial)
+        if min_value < self.min_value_serial or max_value > self.max_value_serial:
+            raise ValueError(
+                f'The min_value and max_value values must be between {self.min_value_serial} '
+                f'and {self.max_value_serial}',
+            )
+
+        return str(self._faker.random_int(min=min_value, max=max_value))
+
+    def mutation_numeric_bigserial(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата bigserial
+        :param kwargs:
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        min_value = kwargs.get('min_value', self.min_value_bigserial)
+        max_value = kwargs.get('max_value', self.max_value_bigserial)
+        if min_value < self.min_value_bigserial or max_value > self.max_value_bigserial:
+            raise ValueError(
+                f'The min_value and max_value values must be between {self.min_value_bigserial} '
+                f'and {self.max_value_bigserial}',
+            )
+
         return str(self._faker.random_int(min=min_value, max=max_value))
