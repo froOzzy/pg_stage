@@ -220,3 +220,15 @@ class Mutator:
             raise ValueError('Key choices not found!')
 
         return str(random.choice(seq=choices))  # nosec
+
+    def mutation_integer(self, **kwargs: int) -> str:
+        """
+        Метод для формирования случайного числа формата int
+        :param kwargs:
+            min_value - минимальное значение
+            max_value - максимальное значение
+        :return: случайное значение в пределах [min_value, max_value]
+        """
+        min_value = kwargs.get('min_value', 0)
+        max_value = kwargs.get('max_value', 9999)
+        return str(self._faker.random_int(min=min_value, max=max_value))
