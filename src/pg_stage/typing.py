@@ -37,7 +37,7 @@ class MapTablesValueType(TypedDict):
     """Описание типа значения карты таблиц"""
 
     mutation_name: str
-    mutation_func: Callable[[Any, ...], str]
+    mutation_func: Callable[..., str]
     mutation_kwargs: Dict[str, Any]
     mutation_relations: RelationTypeMany
     mutation_conditions: ConditionTypeMany
