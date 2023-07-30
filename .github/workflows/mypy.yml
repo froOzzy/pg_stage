@@ -1,4 +1,4 @@
-name: mypy
+name: Mypy
 on: push
 
 jobs:
@@ -19,5 +19,5 @@ jobs:
       - name: Install pg-stage
         run: python3 setup.py install --user
 
-      - name: Run mypy
+      - name: Run Mypy
         run: poetry run mypy src/pg_stage/.
