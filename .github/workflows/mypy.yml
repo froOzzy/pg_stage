@@ -1,8 +1,8 @@
-name: Black
+name: mypy
 on: push
 
 jobs:
-  black:
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -16,5 +16,8 @@ jobs:
       - name: Install dependencies
         run: poetry install --only dev
 
-      - name: Run black
-        run: poetry run black . --diff --check --verbose
+      - name: Install pg-stage
+        run: python3 setup.py install --user
+
+      - name: Run mypy
+        run: poetry run mypy .

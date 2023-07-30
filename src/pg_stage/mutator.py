@@ -250,6 +250,9 @@ class Mutator:
                 f'and {self.max_value_smallint}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_integer(self, **kwargs: int) -> str:
@@ -267,6 +270,9 @@ class Mutator:
                 f'The min_value and max_value values must be between {self.min_value_integer} '
                 f'and {self.max_value_integer}',
             )
+
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
 
         return str(self._faker.random_int(min=min_value, max=max_value))
 
@@ -286,6 +292,9 @@ class Mutator:
                 f'and {self.max_value_bigint}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_decimal(self, **kwargs: int) -> str:
@@ -302,6 +311,16 @@ class Mutator:
         right_digits = kwargs['right_digits']
         min_value = kwargs['min_value']
         max_value = kwargs['max_value']
+        if kwargs.get('unique'):
+            return str(
+                self._faker.unique.pydecimal(
+                    left_digits=left_digits,
+                    right_digits=right_digits,
+                    min_value=min_value,
+                    max_value=max_value,
+                ),
+            )
+
         return str(
             self._faker.pydecimal(
                 left_digits=left_digits,
@@ -323,6 +342,16 @@ class Mutator:
         left_digits = kwargs['left_digits']
         min_value = kwargs['min_value']
         max_value = kwargs['max_value']
+        if kwargs.get('unique'):
+            return str(
+                self._faker.unique.pydecimal(
+                    left_digits=left_digits,
+                    right_digits=6,
+                    min_value=min_value,
+                    max_value=max_value,
+                ),
+            )
+
         return str(
             self._faker.pydecimal(
                 left_digits=left_digits,
@@ -345,6 +374,16 @@ class Mutator:
         left_digits = kwargs['left_digits']
         min_value = kwargs['min_value']
         max_value = kwargs['max_value']
+        if kwargs.get('unique'):
+            return str(
+                self._faker.unique.pydecimal(
+                    left_digits=left_digits,
+                    right_digits=15,
+                    min_value=min_value,
+                    max_value=max_value,
+                ),
+            )
+
         return str(
             self._faker.pydecimal(
                 left_digits=left_digits,
@@ -370,6 +409,9 @@ class Mutator:
                 f'and {self.max_value_smallserial}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_serial(self, **kwargs: int) -> str:
@@ -388,6 +430,9 @@ class Mutator:
                 f'and {self.max_value_serial}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_bigserial(self, **kwargs: int) -> str:
@@ -405,5 +450,8 @@ class Mutator:
                 f'The min_value and max_value values must be between {self.min_value_bigserial} '
                 f'and {self.max_value_bigserial}',
             )
+
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
 
         return str(self._faker.random_int(min=min_value, max=max_value))
