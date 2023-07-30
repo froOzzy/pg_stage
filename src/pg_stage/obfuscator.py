@@ -6,7 +6,7 @@ from typing import Optional, List, Set, Dict
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
-from pg_stage.typing import ConditionTypeMany
+from pg_stage.typing import ConditionTypeMany, MapTablesValueType
 
 
 class Obfuscator:
@@ -29,11 +29,8 @@ class Obfuscator:
         :param delete_tables_by_pattern: список таблиц, которые нужно очистить по паттерну
         """
         self.delimiter = delimiter
-        self.delete_tables_by_pattern = delete_tables_by_pattern
-        if self.delete_tables_by_pattern is None:
-            self.delete_tables_by_pattern = []
-
-        self._map_tables = defaultdict(dict)
+        self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
+        self._map_tables: Dict[str, Dict[str, MapTablesValueType]] = defaultdict(dict)
         self._mutator = Mutator(locale=locale)
         self._relation_values = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
@@ -238,7 +235,7 @@ class Obfuscator:
 
         result = re.search(pattern=self.copy_parse_pattern, string=line)
         if not result:
-            return
+            return None
 
         self._table_name = result.group(1)
         self._table_columns = [item.strip() for item in result.group(2).split(',')]
