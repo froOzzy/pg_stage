@@ -1,8 +1,8 @@
-name: Black
+name: Mypy
 on: push
 
 jobs:
-  black:
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -16,5 +16,5 @@ jobs:
       - name: Install dependencies
         run: poetry install --only dev
 
-      - name: Run black
-        run: poetry run black . --diff --check --verbose
+      - name: Run Mypy
+        run: poetry run mypy src/pg_stage/. --ignore-missing-imports

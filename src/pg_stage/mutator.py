@@ -1,5 +1,5 @@
 import random
-from typing import Any, Union, List
+from typing import Any, List
 
 from faker import Faker
 
@@ -115,7 +115,7 @@ class Mutator:
         """
         return '\\N'
 
-    def mutation_phone_number(self, **kwargs: Union[bool, str]) -> str:
+    def mutation_phone_number(self, **kwargs: Any) -> str:
         """
         Метод для генерации номера телефона.
         :param kwargs:
@@ -123,13 +123,14 @@ class Mutator:
             unique - сгенерировать уникальный номер
         :return: номер телефона
         """
-        format: str = kwargs['format']
-        if kwargs.get('unique'):
-            return self._faker.unique.numerify(format)
+        phone_format: str = kwargs['format']
+        unique: bool = kwargs.get('unique', False)
+        if unique:
+            return self._faker.unique.numerify(phone_format)
 
-        return self._faker.numerify(format)
+        return self._faker.numerify(phone_format)
 
-    def mutation_address(self, **kwargs) -> str:
+    def mutation_address(self, **kwargs: bool) -> str:
         """
         Метод для генерации адреса.
         :param kwargs:
@@ -141,7 +142,7 @@ class Mutator:
 
         return self._faker.address()
 
-    def mutation_past_date(self, **kwargs: Union[bool, str]) -> str:
+    def mutation_past_date(self, **kwargs: Any) -> str:
         """
         Метод для генерации даты в прошедшем времени.
         :param kwargs:
@@ -151,12 +152,13 @@ class Mutator:
         """
         start_date: str = kwargs.get('start_date', '-30d')
         date_format: str = kwargs.get('date_format', '%Y-%m-%d')
-        if kwargs.get('unique'):
+        unique: bool = kwargs.get('unique', False)
+        if unique:
             return self._faker.unique.past_date(start_date=start_date).strftime(date_format)
 
         return self._faker.past_date(start_date=start_date).strftime(date_format)
 
-    def mutation_future_date(self, **kwargs: Union[bool, str]) -> str:
+    def mutation_future_date(self, **kwargs: Any) -> str:
         """
         Метод для генерации даты в будущем времени.
         :param kwargs:
@@ -164,14 +166,15 @@ class Mutator:
             date_format - формат даты, по умолчанию '%Y-%m-%d'
         :return: дата в будущем времени
         """
-        end_date = kwargs.get('end_date', '+30d')
-        date_format = kwargs.get('date_format', '%Y-%m-%d')
-        if kwargs.get('unique'):
+        end_date: str = kwargs.get('end_date', '+30d')
+        date_format: str = kwargs.get('date_format', '%Y-%m-%d')
+        unique: bool = kwargs.get('unique', False)
+        if unique:
             return self._faker.unique.future_date(end_date=end_date).strftime(date_format)
 
         return self._faker.future_date(end_date=end_date).strftime(date_format)
 
-    def mutation_uri(self, **kwargs: Union[bool, int]) -> str:
+    def mutation_uri(self, **kwargs: Any) -> str:
         """
         Метод для генерации uri.
         :param kwargs:
@@ -179,7 +182,8 @@ class Mutator:
         :return: uri
         """
         max_length: int = kwargs.get('max_length', 2048)
-        if kwargs.get('unique'):
+        unique: bool = kwargs.get('unique', False)
+        if unique:
             return self._faker.unique.uri()[:max_length]
 
         return self._faker.uri()[:max_length]
@@ -250,6 +254,9 @@ class Mutator:
                 f'and {self.max_value_smallint}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_integer(self, **kwargs: int) -> str:
@@ -267,6 +274,9 @@ class Mutator:
                 f'The min_value and max_value values must be between {self.min_value_integer} '
                 f'and {self.max_value_integer}',
             )
+
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
 
         return str(self._faker.random_int(min=min_value, max=max_value))
 
@@ -286,6 +296,9 @@ class Mutator:
                 f'and {self.max_value_bigint}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_decimal(self, **kwargs: int) -> str:
@@ -302,6 +315,16 @@ class Mutator:
         right_digits = kwargs['right_digits']
         min_value = kwargs['min_value']
         max_value = kwargs['max_value']
+        if kwargs.get('unique'):
+            return str(
+                self._faker.unique.pydecimal(
+                    left_digits=left_digits,
+                    right_digits=right_digits,
+                    min_value=min_value,
+                    max_value=max_value,
+                ),
+            )
+
         return str(
             self._faker.pydecimal(
                 left_digits=left_digits,
@@ -323,6 +346,16 @@ class Mutator:
         left_digits = kwargs['left_digits']
         min_value = kwargs['min_value']
         max_value = kwargs['max_value']
+        if kwargs.get('unique'):
+            return str(
+                self._faker.unique.pydecimal(
+                    left_digits=left_digits,
+                    right_digits=6,
+                    min_value=min_value,
+                    max_value=max_value,
+                ),
+            )
+
         return str(
             self._faker.pydecimal(
                 left_digits=left_digits,
@@ -345,6 +378,16 @@ class Mutator:
         left_digits = kwargs['left_digits']
         min_value = kwargs['min_value']
         max_value = kwargs['max_value']
+        if kwargs.get('unique'):
+            return str(
+                self._faker.unique.pydecimal(
+                    left_digits=left_digits,
+                    right_digits=15,
+                    min_value=min_value,
+                    max_value=max_value,
+                ),
+            )
+
         return str(
             self._faker.pydecimal(
                 left_digits=left_digits,
@@ -370,6 +413,9 @@ class Mutator:
                 f'and {self.max_value_smallserial}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_serial(self, **kwargs: int) -> str:
@@ -388,6 +434,9 @@ class Mutator:
                 f'and {self.max_value_serial}',
             )
 
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+
         return str(self._faker.random_int(min=min_value, max=max_value))
 
     def mutation_numeric_bigserial(self, **kwargs: int) -> str:
@@ -405,5 +454,8 @@ class Mutator:
                 f'The min_value and max_value values must be between {self.min_value_bigserial} '
                 f'and {self.max_value_bigserial}',
             )
+
+        if kwargs.get('unique'):
+            return str(self._faker.unique.random_int(min=min_value, max=max_value))
 
         return str(self._faker.random_int(min=min_value, max=max_value))

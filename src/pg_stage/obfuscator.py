@@ -2,11 +2,11 @@ import re
 import sys
 import json
 from collections import defaultdict
-from typing import Optional, List
+from typing import Optional, List, Set, Dict
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
-from pg_stage.typing import ConditionTypeMany
+from pg_stage.typing import ConditionTypeMany, MapTablesValueTypeMany
 
 
 class Obfuscator:
@@ -29,20 +29,17 @@ class Obfuscator:
         :param delete_tables_by_pattern: список таблиц, которые нужно очистить по паттерну
         """
         self.delimiter = delimiter
-        self.delete_tables_by_pattern = delete_tables_by_pattern
-        if self.delete_tables_by_pattern is None:
-            self.delete_tables_by_pattern = []
-
-        self._map_tables = defaultdict(dict)
+        self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
+        self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
         self._mutator = Mutator(locale=locale)
-        self._relation_values = {}
-        self._relation_fk = defaultdict(dict)
-        self._is_data = False
-        self._table_name = None
-        self._table_columns = []
-        self._enumerate_table_columns = {}
-        self._delete_tables = set()
-        self._is_delete = False
+        self._relation_values: Dict[str, str] = {}
+        self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
+        self._is_data: bool = False
+        self._table_name: str = ''
+        self._table_columns: List[str] = []
+        self._enumerate_table_columns: Dict[str, int] = {}
+        self._delete_tables: Set[str] = set()
+        self._is_delete: bool = False
 
     def _prepare_variables(self, *, line: str) -> Optional[str]:
         """
@@ -51,7 +48,7 @@ class Obfuscator:
         :return: строка sql
         """
         self._is_data = False
-        self._table_name = None
+        self._table_name = ''
         self._table_columns = []
         self._enumerate_table_columns = {}
         self._is_delete = False
@@ -238,7 +235,7 @@ class Obfuscator:
 
         result = re.search(pattern=self.copy_parse_pattern, string=line)
         if not result:
-            return
+            return None
 
         self._table_name = result.group(1)
         self._table_columns = [item.strip() for item in result.group(2).split(',')]
