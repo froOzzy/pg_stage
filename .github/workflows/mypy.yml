@@ -16,8 +16,5 @@ jobs:
       - name: Install dependencies
         run: poetry install --only dev
 
-      - name: Install pg-stage
-        run: python3 setup.py install --user
-
       - name: Run Mypy
         run: poetry run mypy src/pg_stage/. --ignore-missing-imports
