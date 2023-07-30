@@ -6,7 +6,7 @@ from typing import Optional, List, Set, Dict
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
-from pg_stage.typing import ConditionTypeMany, MapTablesValueType
+from pg_stage.typing import ConditionTypeMany, MapTablesValueTypeMany
 
 
 class Obfuscator:
@@ -30,7 +30,7 @@ class Obfuscator:
         """
         self.delimiter = delimiter
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
-        self._map_tables: Dict[str, Dict[str, MapTablesValueType]] = defaultdict(dict)
+        self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
         self._mutator = Mutator(locale=locale)
         self._relation_values = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
