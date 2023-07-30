@@ -1,5 +1,5 @@
 import random
-from typing import Any, Union, List
+from typing import Any, List
 
 from faker import Faker
 
@@ -115,7 +115,7 @@ class Mutator:
         """
         return '\\N'
 
-    def mutation_phone_number(self, **kwargs: Union[bool, str]) -> str:
+    def mutation_phone_number(self, **kwargs: Any) -> str:
         """
         Метод для генерации номера телефона.
         :param kwargs:
@@ -142,7 +142,7 @@ class Mutator:
 
         return self._faker.address()
 
-    def mutation_past_date(self, **kwargs: Union[bool, str]) -> str:
+    def mutation_past_date(self, **kwargs: Any) -> str:
         """
         Метод для генерации даты в прошедшем времени.
         :param kwargs:
@@ -158,7 +158,7 @@ class Mutator:
 
         return self._faker.past_date(start_date=start_date).strftime(date_format)
 
-    def mutation_future_date(self, **kwargs: Union[bool, str]) -> str:
+    def mutation_future_date(self, **kwargs: Any) -> str:
         """
         Метод для генерации даты в будущем времени.
         :param kwargs:
@@ -174,7 +174,7 @@ class Mutator:
 
         return self._faker.future_date(end_date=end_date).strftime(date_format)
 
-    def mutation_uri(self, **kwargs: Union[bool, int]) -> str:
+    def mutation_uri(self, **kwargs: Any) -> str:
         """
         Метод для генерации uri.
         :param kwargs:

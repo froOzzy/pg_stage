@@ -32,7 +32,7 @@ class Obfuscator:
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
         self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
         self._mutator = Mutator(locale=locale)
-        self._relation_values = {}
+        self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
         self._is_data: bool = False
         self._table_name: str = ''
