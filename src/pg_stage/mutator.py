@@ -123,13 +123,14 @@ class Mutator:
             unique - сгенерировать уникальный номер
         :return: номер телефона
         """
-        format: str = kwargs['format']
-        if kwargs.get('unique'):
-            return self._faker.unique.numerify(format)
+        phone_format: str = kwargs['format']
+        unique: bool = kwargs.get('unique', False)
+        if unique:
+            return self._faker.unique.numerify(phone_format)
 
-        return self._faker.numerify(format)
+        return self._faker.numerify(phone_format)
 
-    def mutation_address(self, **kwargs) -> str:
+    def mutation_address(self, **kwargs: bool) -> str:
         """
         Метод для генерации адреса.
         :param kwargs:
@@ -151,7 +152,8 @@ class Mutator:
         """
         start_date: str = kwargs.get('start_date', '-30d')
         date_format: str = kwargs.get('date_format', '%Y-%m-%d')
-        if kwargs.get('unique'):
+        unique: bool = kwargs.get('unique', False)
+        if unique:
             return self._faker.unique.past_date(start_date=start_date).strftime(date_format)
 
         return self._faker.past_date(start_date=start_date).strftime(date_format)
@@ -164,9 +166,10 @@ class Mutator:
             date_format - формат даты, по умолчанию '%Y-%m-%d'
         :return: дата в будущем времени
         """
-        end_date = kwargs.get('end_date', '+30d')
-        date_format = kwargs.get('date_format', '%Y-%m-%d')
-        if kwargs.get('unique'):
+        end_date: str = kwargs.get('end_date', '+30d')
+        date_format: str = kwargs.get('date_format', '%Y-%m-%d')
+        unique: bool = kwargs.get('unique', False)
+        if unique:
             return self._faker.unique.future_date(end_date=end_date).strftime(date_format)
 
         return self._faker.future_date(end_date=end_date).strftime(date_format)
@@ -179,7 +182,8 @@ class Mutator:
         :return: uri
         """
         max_length: int = kwargs.get('max_length', 2048)
-        if kwargs.get('unique'):
+        unique: bool = kwargs.get('unique', False)
+        if unique:
             return self._faker.unique.uri()[:max_length]
 
         return self._faker.uri()[:max_length]
