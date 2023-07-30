@@ -40,7 +40,7 @@ class MapTablesValueType(TypedDict):
     mutation_func: Callable[[Any], str]
     mutation_kwargs: Dict[str, Any]
     mutation_relations: RelationTypeMany
-    conditions: ConditionTypeMany
+    mutation_conditions: ConditionTypeMany
 
 
 MapTablesValueTypeMany = List[MapTablesValueType]

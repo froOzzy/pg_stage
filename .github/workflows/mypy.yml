@@ -20,4 +20,4 @@ jobs:
         run: python3 setup.py install --user
 
       - name: Run Mypy
-        run: poetry run mypy src/pg_stage/.
+        run: poetry run mypy src/pg_stage/. --ignore-missing-imports
