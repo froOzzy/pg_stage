@@ -31,6 +31,7 @@ class Obfuscator:
         self.delimiter = delimiter
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
         self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
+        self._depenendent_columns: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
         self._mutator = Mutator(locale=locale)
         self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
@@ -117,16 +118,30 @@ class Obfuscator:
                 schema, table_name, column_name = result.group(1).split('.')
                 table_name = f'{schema}.{table_name}'
 
-            self._map_tables[table_name].setdefault(column_name, [])
-            self._map_tables[table_name][column_name].append(
-                {
-                    'mutation_name': mutation_name,
-                    'mutation_func': mutation_func,
-                    'mutation_kwargs': mutation_param.get('mutation_kwargs', {}),
-                    'mutation_relations': mutation_param.get('relations', []),
-                    'mutation_conditions': mutation_param.get('conditions', []),
-                },
-            )
+            if mutation_param.get('consist_of') or mutation_param.get('source_phone'):
+                self._depenendent_columns[table_name].setdefault(column_name, [])
+                self._depenendent_columns[table_name][column_name].append(
+                    {
+                        'mutation_name': mutation_name,
+                        'mutation_func': mutation_func,
+                        'mutation_kwargs': mutation_param.get('mutation_kwargs', {}),
+                        'mutation_relations': mutation_param.get('relations', []),
+                        'mutation_conditions': mutation_param.get('conditions', []),
+                        'mutation_consist_of': mutation_param.get('consist_of', []),
+                        'mutation_source_phone': mutation_param.get('source_phone'),
+                    },
+                )
+            else:
+                self._map_tables[table_name].setdefault(column_name, [])
+                self._map_tables[table_name][column_name].append(
+                    {
+                        'mutation_name': mutation_name,
+                        'mutation_func': mutation_func,
+                        'mutation_kwargs': mutation_param.get('mutation_kwargs', {}),
+                        'mutation_relations': mutation_param.get('relations', []),
+                        'mutation_conditions': mutation_param.get('conditions', []),
+                    },
+                )
 
         return line
 
@@ -162,6 +177,8 @@ class Obfuscator:
         table_mutations_by_column = self._map_tables.get(self._table_name)
         if not table_mutations_by_column:
             return line
+
+        dependent_columns_in_table = self._depenendent_columns.get(self._table_name, [])
 
         result = []
         table_values = line.split(self.delimiter)
@@ -223,6 +240,20 @@ class Obfuscator:
 
                 result.append(new_value)
                 is_obfuscated = True
+
+        for column in dependent_columns_in_table:
+            column_attributes = dependent_columns_in_table[column][0]
+            if column_attributes.get('mutation_consist_of'):
+                mutation_parts = []
+                for part in column_attributes.get('mutation_consist_of'):
+                    mutation_parts.append(result[self._enumerate_table_columns[part]])
+                new_value = ' '.join(mutation_parts)
+                result[self._enumerate_table_columns[column]] = new_value
+
+            if column_attributes.get('mutation_source_phone'):
+                original_number_index = self._enumerate_table_columns[column_attributes.get('mutation_source_phone')]
+                obfuscated_original_number = result[original_number_index]
+                result[self._enumerate_table_columns[column]] = re.sub(r'[^\d]', '', obfuscated_original_number)
 
         return self.delimiter.join(result)
 
