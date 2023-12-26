@@ -44,3 +44,21 @@ class MapTablesValueType(TypedDict):
 
 
 MapTablesValueTypeMany = List[MapTablesValueType]
+
+
+ConsistOfTypeMany = List[str]
+
+
+class MapTablesDependentValueType(TypedDict):
+    """Описание типа значения карты таблиц для зависимых полей"""
+
+    mutation_name: str
+    mutation_func: Callable[..., str]
+    mutation_kwargs: Dict[str, Any]
+    mutation_relations: RelationTypeMany
+    mutation_conditions: ConditionTypeMany
+    mutation_consist_of: ConsistOfTypeMany
+    mutation_source_phone: str
+
+
+MapTablesDependentValueTypeMany = List[MapTablesDependentValueType]

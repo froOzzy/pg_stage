@@ -6,7 +6,7 @@ from typing import Optional, List, Set, Dict
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
-from pg_stage.typing import ConditionTypeMany, MapTablesValueTypeMany
+from pg_stage.typing import ConditionTypeMany, MapTablesValueTypeMany, MapTablesDependentValueTypeMany
 
 
 class Obfuscator:
@@ -31,7 +31,7 @@ class Obfuscator:
         self.delimiter = delimiter
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
         self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
-        self._depenendent_columns: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
+        self._depenendent_columns: Dict[str, Dict[str, MapTablesDependentValueTypeMany]] = defaultdict(dict)
         self._mutator = Mutator(locale=locale)
         self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
@@ -178,7 +178,7 @@ class Obfuscator:
         if not table_mutations_by_column:
             return line
 
-        dependent_columns_in_table = self._depenendent_columns.get(self._table_name, [])
+        dependent_columns_in_table = self._depenendent_columns.get(self._table_name)
 
         result = []
         table_values = line.split(self.delimiter)
@@ -241,19 +241,22 @@ class Obfuscator:
                 result.append(new_value)
                 is_obfuscated = True
 
-        for column in dependent_columns_in_table:
-            column_attributes = dependent_columns_in_table[column][0]
-            if column_attributes.get('mutation_consist_of'):
-                mutation_parts = []
-                for part in column_attributes.get('mutation_consist_of'):
-                    mutation_parts.append(result[self._enumerate_table_columns[part]])
-                new_value = ' '.join(mutation_parts)
-                result[self._enumerate_table_columns[column]] = new_value
+        if dependent_columns_in_table:
+            for column in dependent_columns_in_table:
+                column_attributes = dependent_columns_in_table[column][0]
+                source_phone_column = column_attributes.get('mutation_source_phone')
+                mutation_parts_columns = column_attributes.get('mutation_consist_of')
 
-            if column_attributes.get('mutation_source_phone'):
-                original_number_index = self._enumerate_table_columns[column_attributes.get('mutation_source_phone')]
-                obfuscated_original_number = result[original_number_index]
-                result[self._enumerate_table_columns[column]] = re.sub(r'[^\d]', '', obfuscated_original_number)
+                if mutation_parts_columns:
+                    mutation_parts = [
+                        result[self._enumerate_table_columns[column]] for column in mutation_parts_columns
+                    ]
+                    new_value = ' '.join(mutation_parts)
+                    result[self._enumerate_table_columns[column]] = new_value
+
+                if source_phone_column:
+                    obfuscated_original_number = result[self._enumerate_table_columns[source_phone_column]]
+                    result[self._enumerate_table_columns[column]] = re.sub(r'[^\d]', '', obfuscated_original_number)
 
         return self.delimiter.join(result)
 
