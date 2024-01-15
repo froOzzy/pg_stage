@@ -207,7 +207,7 @@ class Obfuscator:
                     new_value = self._relation_values.get(relation_fk)
 
                     if mutation_name.startswith(('dependent', 'subordinate')):
-                        new_value = mutation_func(new_value)
+                        new_value = mutation_func(new_value, **mutation_kwargs)
 
                     if new_value is None:
                         raise ValueError('Invalid relation fk!')

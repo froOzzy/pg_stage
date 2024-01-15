@@ -469,12 +469,9 @@ class Mutator:
 
     def mutation_subordinate_phone(self, obfuscated_redacted_number=None, **kwargs: Any) -> str:
         if obfuscated_redacted_number:
-            return "{}({}){}-{}-{}".format(
-                obfuscated_redacted_number[0],
-                obfuscated_redacted_number[1:4],
-                obfuscated_redacted_number[4:7],
-                obfuscated_redacted_number[7:9],
-                obfuscated_redacted_number[9:],
-            )
+            phone = kwargs['format']
+            number_of_digits_in_mask = len(re.findall(r'\b\d+\b', phone))
+            for number in obfuscated_redacted_number[number_of_digits_in_mask:]:
+                phone = phone.replace('#', number, 1)
+            return phone
         return self.mutation_phone_number(**kwargs)
-

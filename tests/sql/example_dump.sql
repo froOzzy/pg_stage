@@ -258,7 +258,7 @@ COMMENT ON COLUMN auth_users.last_name IS 'anon: [{"mutation_name": "last_name"}
 -- Name: COLUMN auth_users.phone; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.phone IS 'anon: [{"mutation_name": "subordinate_phone", "relations": [{"table_name": "auth_user_replica", "column_name": "phone", "from_column_name": "id", "to_column_name": "uuid"}], "mutation_kwargs": {"format": "7(9##)###-##-##"}}]';
+COMMENT ON COLUMN auth_users.phone IS 'anon: [{"mutation_name": "subordinate_phone", "relations": [{"table_name": "auth_user_replica", "column_name": "phone", "from_column_name": "id", "to_column_name": "uuid"}], "mutation_kwargs": {"format": "7 (9##) ### - ## - ##"}}]';
 
 
 --
