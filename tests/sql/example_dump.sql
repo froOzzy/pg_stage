@@ -173,6 +173,11 @@ ALTER TABLE auth_user_replica OWNER TO postgres;
 
 COMMENT ON COLUMN auth_user_replica.email IS 'anon: [{"mutation_name": "email", "relations": [{"table_name": "auth_users", "column_name": "email", "from_column_name": "uuid", "to_column_name": "id"}]}]';
 
+--
+-- Name: COLUMN auth_users.phone; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN auth_user_replica.phone IS 'anon: [{"mutation_name": "dependent_phone", "relations": [{"table_name": "auth_users", "column_name": "phone", "from_column_name": "uuid", "to_column_name": "id"}], "mutation_kwargs": {"format": "79#########"}}]';
 
 COPY auth_user_replica (uuid, email, crypted_password, password_salt, persistence_token, created_at, updated_at, active, first_name, last_name, agency_id, phone, perishable_token, extension, commissioned, region, division, location, last_request_at) FROM stdin;
 07750c56-fb37-46e1-b7b6-da530704c056	cj@example.com	400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3255d3bd1edd18ffc4a8092e2616b9e5ca7954b2c52504	v8BMktHnOeokEBTy6As	86a97ff982e87ed5af7d90ab2ce31d4e89a3af3e6a0490b067bb8213aea7a4ee0eeafae1d8fe3c6f990aead095092fcf852004b18e484ef22569aebf64c3747f	2016-06-03 18:23:06.25685	2016-06-03 18:23:06.25685	t	C.J.	Cregg	\N	1231231234	hw1rFSX7yJBz65lDVzYi	\N	f	\N	\N	\N	\N
@@ -253,7 +258,7 @@ COMMENT ON COLUMN auth_users.last_name IS 'anon: [{"mutation_name": "last_name"}
 -- Name: COLUMN auth_users.phone; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.phone IS 'anon: [{"mutation_name": "phone_number", "mutation_kwargs": {"format": "79#########"}}]';
+COMMENT ON COLUMN auth_users.phone IS 'anon: [{"mutation_name": "subordinate_phone", "relations": [{"table_name": "auth_user_replica", "column_name": "phone", "from_column_name": "id", "to_column_name": "uuid"}], "mutation_kwargs": {"format": "7(9##)###-##-##"}}]';
 
 
 --

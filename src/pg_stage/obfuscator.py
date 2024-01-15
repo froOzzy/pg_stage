@@ -181,6 +181,7 @@ class Obfuscator:
                 mutation_kwargs = mutation_for_column['mutation_kwargs']
                 mutation_relations = mutation_for_column['mutation_relations']
                 mutation_conditions = mutation_for_column['mutation_conditions']
+                mutation_name = mutation_for_column['mutation_name']
                 if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
                     if mutation_index + 1 == len_mutations_for_column:
                         result.append(table_values[column_index])
@@ -204,6 +205,10 @@ class Obfuscator:
                         continue
 
                     new_value = self._relation_values.get(relation_fk)
+
+                    if mutation_name.startswith(('dependent', 'subordinate')):
+                        new_value = mutation_func(new_value)
+
                     if new_value is None:
                         raise ValueError('Invalid relation fk!')
 
