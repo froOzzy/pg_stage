@@ -1,4 +1,5 @@
 import random
+import re
 from typing import Any, List
 
 from faker import Faker
@@ -19,6 +20,7 @@ class Mutator:
     max_value_serial = 2147483647
     min_value_bigserial = 1
     max_value_bigserial = 9223372036854775807
+    redacted_phone_pattern = r'[^\d]'
 
     def __init__(self, locale: str = 'en_US') -> None:
         """
@@ -459,3 +461,20 @@ class Mutator:
             return str(self._faker.unique.random_int(min=min_value, max=max_value))
 
         return str(self._faker.random_int(min=min_value, max=max_value))
+
+    def mutation_dependent_phone(self, obfuscated_original_number=None, **kwargs: Any) -> str:
+        if obfuscated_original_number:
+            return re.sub(self.redacted_phone_pattern, '', obfuscated_original_number)
+        return self.mutation_phone_number(**kwargs)
+
+    def mutation_subordinate_phone(self, obfuscated_redacted_number=None, **kwargs: Any) -> str:
+        if obfuscated_redacted_number:
+            return "{}({}){}-{}-{}".format(
+                obfuscated_redacted_number[0],
+                obfuscated_redacted_number[1:4],
+                obfuscated_redacted_number[4:7],
+                obfuscated_redacted_number[7:9],
+                obfuscated_redacted_number[9:],
+            )
+        return self.mutation_phone_number(**kwargs)
+
