@@ -12,7 +12,7 @@ from pg_stage.typing import ConditionTypeMany, MapTablesValueTypeMany
 class Obfuscator:
     """Главный класс для работы с обфускатором."""
 
-    copy_parse_pattern = r'COPY ([\d\w\_]+)\.*([\d\w\_]*) \(([\w\W]+)\) FROM stdin;'
+    copy_parse_pattern = r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;'
     comment_table_parse_pattern = r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;'
     comment_column_parse_pattern = r'COMMENT ON COLUMN ([\d\w\_\.]+) IS \'anon: ([\w\W]*)\'\;'
 
@@ -49,6 +49,7 @@ class Obfuscator:
         :return: строка sql
         """
         self._is_data = False
+        self._schema_name = None
         self._table_name = ''
         self._table_columns = []
         self._enumerate_table_columns = {}
@@ -115,8 +116,8 @@ class Obfuscator:
             try:
                 table_name, column_name = result.group(1).split('.')
             except ValueError:
-                schema, table_name, column_name = result.group(1).split('.')
-                table_name = f'{schema}.{table_name}'
+                schema_name, table_name, column_name = result.group(1).split('.')
+                table_name = f'{schema_name}.{table_name}'
 
             self._map_tables[table_name].setdefault(column_name, [])
             self._map_tables[table_name][column_name].append(
@@ -237,18 +238,18 @@ class Obfuscator:
         if not result:
             return None
 
-        if result.group(2):
-            current_schema_name = result.group(1)
-            self._table_name = result.group(2)
-        else:
-            current_schema_name = None
-            self._table_name = result.group(1)
+        try:
+            schema_name, self._table_name = result.group(1).split('.')
+        except ValueError:
+            schema_name = None
+            self._table_name = result.group(1).split('.')
 
-        if self._schema_name != current_schema_name:
+        if self._schema_name != schema_name:
             # Если произошла смена схемы БД, то сбрасываем накопившиеся уникальные значения для ускорения работы
             self._mutator.clear_unique_values()
 
-        self._table_columns = [item.strip() for item in result.group(3).split(',')]
+        self._schema_name = schema_name
+        self._table_columns = [item.strip() for item in result.group(2).split(',')]
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
         self._is_delete = self._table_name in self._delete_tables or any(
             re.search(pattern, self._table_name) for pattern in self.delete_tables_by_pattern
