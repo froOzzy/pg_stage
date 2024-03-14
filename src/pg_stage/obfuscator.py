@@ -242,7 +242,7 @@ class Obfuscator:
             schema_name, self._table_name = result.group(1).split('.')
         except ValueError:
             schema_name = None
-            self._table_name = result.group(1).split('.')
+            self._table_name = result.group(1)
 
         if self._schema_name != schema_name:
             # Если произошла смена схемы БД, то сбрасываем накопившиеся уникальные значения для ускорения работы
