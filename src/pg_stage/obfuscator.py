@@ -239,7 +239,8 @@ class Obfuscator:
             return None
 
         try:
-            schema_name, self._table_name = result.group(1).split('.')
+            schema_name, _ = result.group(1).split('.')
+            self._table_name = result.group(1)
         except ValueError:
             schema_name = None
             self._table_name = result.group(1)
