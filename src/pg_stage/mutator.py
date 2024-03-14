@@ -27,6 +27,10 @@ class Mutator:
         """
         self._faker = Faker(locale=locale)
 
+    def clear_unique_values(self) -> None:
+        """Метод для сброса уникальных значений."""
+        self._faker.unique.clear()
+
     def mutation_email(self, **kwargs: bool) -> str:
         """
         Метод для генерации email-а.

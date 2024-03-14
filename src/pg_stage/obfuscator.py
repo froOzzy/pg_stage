@@ -35,6 +35,7 @@ class Obfuscator:
         self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
         self._is_data: bool = False
+        self._schema_name: Optional[str] = None
         self._table_name: str = ''
         self._table_columns: List[str] = []
         self._enumerate_table_columns: Dict[str, int] = {}
@@ -114,8 +115,8 @@ class Obfuscator:
             try:
                 table_name, column_name = result.group(1).split('.')
             except ValueError:
-                schema, table_name, column_name = result.group(1).split('.')
-                table_name = f'{schema}.{table_name}'
+                schema_name, table_name, column_name = result.group(1).split('.')
+                table_name = f'{schema_name}.{table_name}'
 
             self._map_tables[table_name].setdefault(column_name, [])
             self._map_tables[table_name][column_name].append(
@@ -232,11 +233,20 @@ class Obfuscator:
         :param line: строка sql
         :return: строка sql
         """
-
         result = re.search(pattern=self.copy_parse_pattern, string=line)
         if not result:
             return None
 
+        try:
+            schema_name, _ = result.group(1).split('.')
+        except ValueError:
+            schema_name = None
+
+        if self._schema_name != schema_name:
+            # Если произошла смена схемы БД, то сбрасываем накопившиеся уникальные значения для ускорения работы
+            self._mutator.clear_unique_values()
+
+        self._schema_name = schema_name
         self._table_name = result.group(1)
         self._table_columns = [item.strip() for item in result.group(2).split(',')]
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
