@@ -49,7 +49,6 @@ class Obfuscator:
         :return: строка sql
         """
         self._is_data = False
-        self._schema_name = None
         self._table_name = ''
         self._table_columns = []
         self._enumerate_table_columns = {}
