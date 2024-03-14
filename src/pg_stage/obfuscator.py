@@ -240,16 +240,15 @@ class Obfuscator:
 
         try:
             schema_name, _ = result.group(1).split('.')
-            self._table_name = result.group(1)
         except ValueError:
             schema_name = None
-            self._table_name = result.group(1)
 
         if self._schema_name != schema_name:
             # Если произошла смена схемы БД, то сбрасываем накопившиеся уникальные значения для ускорения работы
             self._mutator.clear_unique_values()
 
         self._schema_name = schema_name
+        self._table_name = result.group(1)
         self._table_columns = [item.strip() for item in result.group(2).split(',')]
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
         self._is_delete = self._table_name in self._delete_tables or any(
