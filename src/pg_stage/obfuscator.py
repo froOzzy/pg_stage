@@ -12,7 +12,7 @@ from pg_stage.typing import ConditionTypeMany, MapTablesValueTypeMany
 class Obfuscator:
     """Главный класс для работы с обфускатором."""
 
-    copy_parse_pattern = r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;'
+    copy_parse_pattern = r'COPY ([\d\w\_]+)\.*([\d\w\_]*) \(([\w\W]+)\) FROM stdin;'
     comment_table_parse_pattern = r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;'
     comment_column_parse_pattern = r'COMMENT ON COLUMN ([\d\w\_\.]+) IS \'anon: ([\w\W]*)\'\;'
 
@@ -35,6 +35,7 @@ class Obfuscator:
         self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
         self._is_data: bool = False
+        self._schema_name: Optional[str] = None
         self._table_name: str = ''
         self._table_columns: List[str] = []
         self._enumerate_table_columns: Dict[str, int] = {}
@@ -232,13 +233,22 @@ class Obfuscator:
         :param line: строка sql
         :return: строка sql
         """
-
         result = re.search(pattern=self.copy_parse_pattern, string=line)
         if not result:
             return None
 
-        self._table_name = result.group(1)
-        self._table_columns = [item.strip() for item in result.group(2).split(',')]
+        if result.group(2):
+            current_schema_name = result.group(1)
+            self._table_name = result.group(2)
+        else:
+            current_schema_name = None
+            self._table_name = result.group(1)
+
+        if self._schema_name != current_schema_name:
+            # Если произошла смена схемы БД, то сбрасываем накопившиеся уникальные значения для ускорения работы
+            self._mutator.clear_unique_values()
+
+        self._table_columns = [item.strip() for item in result.group(3).split(',')]
         self._enumerate_table_columns = {column_name: index for index, column_name in enumerate(self._table_columns)}
         self._is_delete = self._table_name in self._delete_tables or any(
             re.search(pattern, self._table_name) for pattern in self.delete_tables_by_pattern
