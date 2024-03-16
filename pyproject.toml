@@ -36,6 +36,7 @@ skip-string-normalization = true
 [tool.poetry.dependencies]
 python = ">=3.7"
 Faker = ">=16.6.0"
+mimesis = ">=15.1.0"
 typing-extensions = ">=4.5.0"
 
 [tool.poetry.dev-dependencies]

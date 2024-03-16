@@ -20,11 +20,15 @@ class Mutator:
     min_value_bigserial = 1
     max_value_bigserial = 9223372036854775807
 
-    def __init__(self, locale: str = 'en_US') -> None:
+    def __init__(self, locale: str = 'en_US', use_mimesis: bool = False) -> None:
         """
         Метод инициализации класса.
-        :param locale:  локализация для Faker
+        :param locale: локализация для Faker
+        :param use_mimesis: использовать библиотеку mimesis вместо faker
         """
+        self._use_mimesis = use_mimesis
+        if self._use_mimesis:
+            return
         self._faker = Faker(locale=locale)
 
     def clear_unique_values(self) -> None:
