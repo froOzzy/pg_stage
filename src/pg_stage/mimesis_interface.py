@@ -92,7 +92,7 @@ class UniqueInterface:
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
-        self._internet = Internet(locale=self._locale)
+        self._internet = Internet()
         self._numeric = Numbers(locale=self._locale)
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
@@ -277,7 +277,7 @@ class MimesisInterface:
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
-        self._internet = Internet(locale=self._locale)
+        self._internet = Internet()
         self._numeric = Numbers(locale=self._locale)
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
