@@ -2,7 +2,7 @@ import random
 from typing import Any, List
 
 from faker import Faker
-from mimesis_interface import MimesisInterface
+from pg_stage.mimesis_interface import MimesisInterface
 
 
 class Mutator:
