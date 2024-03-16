@@ -31,7 +31,7 @@ def _parse_date_string(value: str) -> Dict[str, float]:
     if not parts:
         raise ValueError(f"Can't parse date string `{value}`")
 
-    parts = parts.groupdict()
+    parts = parts.groupdict()  # type: ignore
     time_params: Dict[str, float] = {}
     for name_, param_ in parts.items():
         if param_:
@@ -98,7 +98,7 @@ class UniqueInterface:
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
-        self._cache = {}
+        self._cache = {}  # type: ignore
 
     def _generate_unique_value(self, func: Callable[[Any], Any], *args: Any, **kwargs: Any) -> Any:
         """Метод для генерации уникального значения."""
@@ -291,7 +291,7 @@ class MimesisInterface:
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
-        self._cache = {}
+        self._cache = {}  # type: ignore
 
     def email(self) -> str:
         """
