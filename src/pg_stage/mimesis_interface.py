@@ -212,7 +212,7 @@ class UniqueInterface:
         Метод для получения уникального uri.
         :return: uri
         """
-        return self._generate_unique_value(func=self._internet.home_page)
+        return self._generate_unique_value(func=self._internet.uri)
 
     def ipv4_public(self) -> str:
         """
@@ -376,7 +376,7 @@ class MimesisInterface:
         Метод для получения uri.
         :return: uri
         """
-        return self._internet.home_page()
+        return self._internet.uri()
 
     def ipv4_public(self) -> str:
         """
