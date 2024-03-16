@@ -2,6 +2,7 @@ import random
 from typing import Any, List
 
 from faker import Faker
+from mimesis_interface import MimesisInterface
 
 
 class Mutator:
@@ -26,9 +27,10 @@ class Mutator:
         :param locale: локализация для Faker
         :param use_mimesis: использовать библиотеку mimesis вместо faker
         """
-        self._use_mimesis = use_mimesis
-        if self._use_mimesis:
+        if use_mimesis:
+            self._faker = MimesisInterface(locale=locale)
             return
+
         self._faker = Faker(locale=locale)
 
     def clear_unique_values(self) -> None:

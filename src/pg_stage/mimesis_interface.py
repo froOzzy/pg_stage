@@ -1,9 +1,86 @@
+import re
 import datetime
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict
 
-from mimesis import Person, Address, Datetime
+from mimesis import Person, Address, Datetime, Internet, Numeric
 from mimesis.locales import Locale
 from mimesis.builtins import RussiaSpecProvider
+
+timedelta_pattern: str = r''
+for name, sym in [
+    ('years', 'y'),
+    ('months', 'M'),
+    ('weeks', 'w'),
+    ('days', 'd'),
+    ('hours', 'h'),
+    ('minutes', 'm'),
+    ('seconds', 's'),
+]:
+    timedelta_pattern += rf'((?P<{name}>(?:\+|-)\d+?){sym})?'
+
+regex = re.compile(timedelta_pattern)
+
+
+def _parse_date_string(value: str) -> Dict[str, float]:
+    """
+    Метод для парсинга строки с датой.
+    :param value: значение для парсинга
+    :return: список параметров для datetime.timedelta
+    """
+    parts = regex.match(value)
+    if not parts:
+        raise ValueError(f"Can't parse date string `{value}`")
+
+    parts = parts.groupdict()
+    time_params: Dict[str, float] = {}
+    for name_, param_ in parts.items():
+        if param_:
+            time_params[name_] = int(param_)
+
+    if 'years' in time_params:
+        if 'days' not in time_params:
+            time_params['days'] = 0
+
+        time_params['days'] += 365.24 * time_params.pop('years')
+
+    if 'months' in time_params:
+        if 'days' not in time_params:
+            time_params['days'] = 0
+
+        time_params['days'] += 30.42 * time_params.pop('months')
+
+    if not time_params:
+        raise ValueError(f"Can't parse date string `{value}`")
+
+    return time_params
+
+
+def _parse_date(now: datetime.datetime, value: Any) -> datetime.date:
+    """
+    Метод для парсинга даты из строки.
+    :param now: текущая дата и время
+    :param value: значение для парсинга
+    :return: дата
+    """
+    if isinstance(value, datetime.datetime):
+        return value.date()
+
+    if isinstance(value, datetime.date):
+        return value
+
+    if isinstance(value, datetime.timedelta):
+        return (now + value).date()
+
+    if isinstance(value, str):
+        if value in ('today', 'now'):
+            return now.date()
+
+        time_params = _parse_date_string(value)
+        return (now + datetime.timedelta(**time_params)).date()
+    if isinstance(value, int):
+        return (now + datetime.timedelta(value)).date()
+
+    raise ValueError(f"Invalid format for date {value!r}")
 
 
 class UniqueInterface:
@@ -15,7 +92,13 @@ class UniqueInterface:
         self._unique_value = set()
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
+        self._datetime = Datetime(locale=self._locale)
+        self._internet = Internet(locale=self._locale)
+        self._numeric = Numeric(locale=self._locale)
         self._russian_provider = RussiaSpecProvider()
+        self._current_year = datetime.date.today().year
+        self._now = datetime.datetime.now()
+        self._cache = {}
 
     def _generate_unique_value(self, func: Callable[[Any], Any], *args: Any, **kwargs: Any) -> Any:
         """Метод для генерации уникального значения."""
@@ -89,7 +172,100 @@ class UniqueInterface:
         Метод для формирования уникального адреса.
         :return: адрес
         """
-        return self._generate_unique_value(self._address.address)
+        return self._generate_unique_value(func=self._address.address)
+
+    def past_date(self, start_date: Any) -> datetime.date:
+        """
+        Метод для формирования уникальной даты между start_date и прошлым годом (относительно инициализации класса).
+        :param start_date: дата начала
+        :return: дата
+        """
+        start = self._cache.get(start_date)
+        if not start:
+            start = _parse_date(now=self._now, value=start_date).year
+            self._cache[start_date] = start
+
+        end = self._current_year - 1
+        if start >= end:
+            start -= 2
+
+        return self._generate_unique_value(func=self._datetime.date, start=start, end=end)
+
+    def future_date(self, end_date: Any) -> datetime.date:
+        """
+        Метод для формирования уникальной даты между следущим годом (относительно инициализации класса) и end_date.
+        :param end_date: дата окончания
+        :return: дата
+        """
+        end = self._cache.get(end_date)
+        if not end:
+            end = _parse_date(now=self._now, value=end_date).year
+            self._cache[end_date] = end
+
+        start = self._current_year + 1
+        if end <= start:
+            end += 2
+
+        return self._generate_unique_value(func=self._datetime.date, start=start, end=end)
+
+    def uri(self) -> str:
+        """
+        Метод для получения уникального uri.
+        :return: uri
+        """
+        return self._generate_unique_value(func=self._internet.uri)
+
+    def ipv4_public(self) -> str:
+        """
+        Метод для получения уникального IPV4
+        :return: IPV4
+        """
+        return self._generate_unique_value(func=self._internet.ip_v4)
+
+    def ipv4_private(self) -> str:
+        """
+        Метод для получения уникального IPV4
+        :return: IPV4
+        """
+        return self._generate_unique_value(func=self._internet.ip_v4)
+
+    def ipv6(self) -> str:
+        """
+        Метод для получения уникального IPV6
+        :return: IPV6
+        """
+        return self._generate_unique_value(func=self._internet.ip_v6)
+
+    def random_int(self, min: int, max: int) -> int:
+        """
+        Метод для получения случайного уникального числа.
+        :param min: минимальное значение
+        :param max: максимальное значение
+        """
+        return self._generate_unique_value(func=self._numeric.integer_number, start=min, end=max)
+
+    def random_int(self, min: int, max: int) -> int:
+        """
+        Метод для получения случайного уникального числа.
+        :param min: минимальное значение
+        :param max: максимальное значение
+        """
+        return self._generate_unique_value(func=self._numeric.integer_number, start=min, end=max)
+
+    def pydecimal(self, left_digits: int, right_digits: int, min_value: float, max_value: float):
+        """
+        Метод для получения уникального числа с плавающей точкой.
+        :param left_digits: количество символов до запятой
+        :param right_digits: количество символов после запятой
+        :param min_value: минимальное значение
+        :param max_value: максимальное значение
+        """
+        return self._generate_unique_value(
+            func=self._numeric.float_number,
+            start=min_value,
+            end=max_value,
+            precision=right_digits,
+        )
 
 
 class MimesisInterface:
@@ -110,8 +286,12 @@ class MimesisInterface:
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
+        self._internet = Internet(locale=self._locale)
+        self._numeric = Numeric(locale=self._locale)
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
+        self._now = datetime.datetime.now()
+        self._cache = {}
 
     def email(self) -> str:
         """
@@ -166,10 +346,82 @@ class MimesisInterface:
         """
         return self._address.address()
 
-    def past_date(self, start_date: str) -> datetime.date:
+    def past_date(self, start_date: Any) -> datetime.date:
         """
-        Метод для формирования даты между start_date и секундой назад.
+        Метод для формирования даты между start_date и прошым годом (относительно инициализации класса).
         :param start_date: дата начала
         :return: дата
         """
-        return self._datetime.date()
+        start = self._cache.get(start_date)
+        if not start:
+            start = _parse_date(now=self._now, value=start_date).year
+            self._cache[start_date] = start
+
+        end = self._current_year - 1
+        if start >= end:
+            start -= 2
+
+        return self._datetime.date(start=start, end=end)
+
+    def future_date(self, end_date: Any) -> datetime.date:
+        """
+        Метод для формирования даты между следующим годом (относительно инициализации класса) и end_date.
+        :param end_date: дата окончания
+        :return: дата
+        """
+        end = self._cache.get(end_date)
+        if not end:
+            end = _parse_date(now=self._now, value=end_date).year
+            self._cache[end_date] = end
+
+        start = self._current_year + 1
+        if end <= start:
+            end += 2
+
+        return self._datetime.date(start=start, end=end)
+
+    def uri(self) -> str:
+        """
+        Метод для получения uri.
+        :return: uri
+        """
+        return self._internet.uri()
+
+    def ipv4_public(self) -> str:
+        """
+        Метод для получения IPV4
+        :return: IPV4
+        """
+        return self._internet.ip_v4()
+
+    def ipv4_private(self) -> str:
+        """
+        Метод для получения IPV4
+        :return: IPV4
+        """
+        return self._internet.ip_v4()
+
+    def ipv6(self) -> str:
+        """
+        Метод для получения IPV6
+        :return: IPV6
+        """
+        return self._internet.ip_v6()
+
+    def random_int(self, min: int, max: int) -> int:
+        """
+        Метод для получения случайного числа.
+        :param min: минимальное значение
+        :param max: максимальное значение
+        """
+        return self._numeric.integer_number(start=min, end=max)
+
+    def pydecimal(self, left_digits: int, right_digits: int, min_value: float, max_value: float):
+        """
+        Метод для получения числа с плавающей точкой.
+        :param left_digits: количество символов до запятой
+        :param right_digits: количество символов после запятой
+        :param min_value: минимальное значение
+        :param max_value: максимальное значение
+        """
+        return self._numeric.float_number(start=min_value, end=max_value, precision=right_digits)
