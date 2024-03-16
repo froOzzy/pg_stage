@@ -2,7 +2,7 @@ import re
 import datetime
 from typing import Any, Callable, Dict
 
-from mimesis import Person, Address, Datetime, Internet, Numbers
+from mimesis import Person, Address, Datetime, Internet, Numeric
 from mimesis.builtins import RussiaSpecProvider
 
 timedelta_pattern: str = r''
@@ -93,7 +93,7 @@ class UniqueInterface:
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
         self._internet = Internet()
-        self._numeric = Numbers()
+        self._numeric = Numeric()
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
@@ -278,7 +278,7 @@ class MimesisInterface:
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
         self._internet = Internet()
-        self._numeric = Numbers()
+        self._numeric = Numeric()
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
