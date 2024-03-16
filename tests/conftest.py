@@ -5,4 +5,4 @@ from pg_stage.obfuscator import Obfuscator
 
 @pytest.fixture(autouse=True)
 def obfuscator_object():
-    return Obfuscator()
+    return Obfuscator(use_mimesis=True)
