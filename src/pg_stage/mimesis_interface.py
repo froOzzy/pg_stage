@@ -244,14 +244,6 @@ class UniqueInterface:
         """
         return self._generate_unique_value(func=self._numeric.integer_number, start=min, end=max)
 
-    def random_int(self, min: int, max: int) -> int:
-        """
-        Метод для получения случайного уникального числа.
-        :param min: минимальное значение
-        :param max: максимальное значение
-        """
-        return self._generate_unique_value(func=self._numeric.integer_number, start=min, end=max)
-
     def pydecimal(self, left_digits: int, right_digits: int, min_value: float, max_value: float):
         """
         Метод для получения уникального числа с плавающей точкой.
