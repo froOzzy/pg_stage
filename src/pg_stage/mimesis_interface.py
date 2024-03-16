@@ -33,7 +33,7 @@ def _parse_date_string(value: str) -> Dict[str, float]:
 
     parts = parts.groupdict()  # type: ignore
     time_params: Dict[str, float] = {}
-    for name_, param_ in parts.items():
+    for name_, param_ in parts.items():  # type: ignore
         if param_:
             time_params[name_] = int(param_)
 
@@ -89,7 +89,7 @@ class UniqueInterface:
     def __init__(self, locale: str = 'en') -> None:
         self._locale = locale
         self._is_russian_locale = locale == Locale.RU
-        self._unique_value = set()
+        self._unique_value = set()  # type: ignore
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
