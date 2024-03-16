@@ -3,7 +3,6 @@ import datetime
 from typing import Any, Callable, Dict
 
 from mimesis import Person, Address, Datetime, Internet, Numbers
-from mimesis.locales import Locale
 from mimesis.builtins import RussiaSpecProvider
 
 timedelta_pattern: str = r''
@@ -88,7 +87,7 @@ class UniqueInterface:
 
     def __init__(self, locale: str = 'en') -> None:
         self._locale = locale
-        self._is_russian_locale = locale == Locale.RU
+        self._is_russian_locale = locale == 'ru'
         self._unique_value = set()  # type: ignore
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
@@ -273,13 +272,13 @@ class MimesisInterface:
         """
         # Локализация для faker использует _, поэтому выбираем первую часть строки
         self._locale = locale.split('_')[0]
-        self._is_russian_locale = locale == Locale.RU.value
+        self._is_russian_locale = locale == 'ru'
         self.unique = UniqueInterface(locale=self._locale)
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
         self._internet = Internet(locale=self._locale)
-        self._numeric = Numeric(locale=self._locale)
+        self._numeric = Numbers(locale=self._locale)
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
