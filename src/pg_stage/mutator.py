@@ -57,7 +57,7 @@ class Mutator:
     @staticmethod
     def _random_int(a: int, b: int) -> int:
         b = b - a
-        return int(random.random() * b) + a
+        return int(random.random() * b) + a  # nosec
 
     def _generate_string_by_mask(self, mask: str, char: str = '@', digit: str = '#') -> str:
         """
