@@ -71,10 +71,7 @@ class Mutator:
         digit_code = ord(digit)
 
         if char_code == digit_code:
-            raise ValueError(
-                "The same placeholder cannot be "
-                "used for both numbers and characters."
-            )
+            raise ValueError('The same placeholder cannot be used for both numbers and characters.')
 
         _mask = mask.encode()
         code = bytearray(len(_mask))
