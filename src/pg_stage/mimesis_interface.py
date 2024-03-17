@@ -173,22 +173,22 @@ class UniqueInterface:
         """
         return self._generate_unique_value(func=self._address.address)
 
-    def date_between_dates(self, start_date: Any, end_date: Any) -> datetime.date:
+    def date_between_dates(self, date_start: Any, date_end: Any) -> datetime.date:
         """
-        Метод для формирования уникальной даты между start_date и end_date.
-        :param start_date: дата начала
-        :param end_date: дата окончания
+        Метод для формирования уникальной даты между date_start и date_end.
+        :param date_start: дата начала
+        :param date_end: дата окончания
         :return: дата
         """
-        start = self._cache.get(start_date)
+        start = self._cache.get(date_start)
         if not start:
-            start = parse_date(now=self._now, value=start_date).year
-            self._cache[start_date] = start
+            start = parse_date(now=self._now, value=date_start).year
+            self._cache[date_start] = start
 
-        end = self._cache.get(end_date)
+        end = self._cache.get(date_end)
         if not end:
-            end = parse_date(now=self._now, value=end_date).year
-            self._cache[end_date] = end
+            end = parse_date(now=self._now, value=date_end).year
+            self._cache[date_end] = end
 
         return self._generate_unique_value(func=self._datetime.date, start=start, end=end)
 
@@ -322,22 +322,22 @@ class MimesisInterface:
         """
         return self._address.address()
 
-    def date_between_dates(self, start_date: Any, end_date: Any) -> datetime.date:
+    def date_between_dates(self, date_start: Any, date_end: Any) -> datetime.date:
         """
-        Метод для формирования даты между start_date и end_date.
-        :param start_date: дата начала
-        :param end_date: дата окончания
+        Метод для формирования даты между date_start и date_end.
+        :param date_start: дата начала
+        :param date_end: дата окончания
         :return: дата
         """
-        start = self._cache.get(start_date)
+        start = self._cache.get(date_start)
         if not start:
-            start = parse_date(now=self._now, value=start_date).year
-            self._cache[start_date] = start
+            start = parse_date(now=self._now, value=date_start).year
+            self._cache[date_start] = start
 
-        end = self._cache.get(end_date)
+        end = self._cache.get(date_end)
         if not end:
-            end = parse_date(now=self._now, value=end_date).year
-            self._cache[end_date] = end
+            end = parse_date(now=self._now, value=date_end).year
+            self._cache[date_end] = end
 
         return self._datetime.date(start=start, end=end)
 
