@@ -2,7 +2,7 @@ import re
 import datetime
 from typing import Any, Callable, Dict
 
-from mimesis import Person, Address, Datetime, Internet, Numeric
+from mimesis import Person, Address, Datetime, Internet, Numbers
 from mimesis.builtins import RussiaSpecProvider
 
 timedelta_pattern: str = r''
@@ -93,7 +93,7 @@ class UniqueInterface:
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
         self._internet = Internet()
-        self._numeric = Numeric()
+        self._numeric = Numbers()
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
@@ -212,7 +212,7 @@ class UniqueInterface:
         Метод для получения уникального uri.
         :return: uri
         """
-        return self._generate_unique_value(func=self._internet.uri)
+        return self._generate_unique_value(func=self._internet.home_page)
 
     def ipv4_public(self) -> str:
         """
@@ -278,7 +278,7 @@ class MimesisInterface:
         self._address = Address(locale=self._locale)
         self._datetime = Datetime(locale=self._locale)
         self._internet = Internet()
-        self._numeric = Numeric()
+        self._numeric = Numbers()
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
@@ -376,7 +376,7 @@ class MimesisInterface:
         Метод для получения uri.
         :return: uri
         """
-        return self._internet.uri()
+        return self._internet.home_page()
 
     def ipv4_public(self) -> str:
         """
