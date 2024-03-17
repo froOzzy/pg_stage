@@ -46,11 +46,17 @@ class Mutator:
 
     def _generate_unique_value(self, func: Callable[[Any], Any], *args: Any, **kwargs: Any) -> Any:
         """Метод для генерации уникального значения."""
+        counter = 0
         while True:
+            if counter > 1000:
+                raise RecursionError('Exceeded the number of attempts to generate a unique value!')
+
             value = func(*args, **kwargs)
             if not set(value) & self._unique_values:
                 self._unique_values.add(value)
                 break
+
+            counter += 1
 
         return value
 
