@@ -173,10 +173,11 @@ class UniqueInterface:
         """
         return self._generate_unique_value(func=self._address.address)
 
-    def past_date(self, start_date: Any) -> datetime.date:
+    def date_between_dates(self, start_date: Any, end_date: Any) -> datetime.date:
         """
-        Метод для формирования уникальной даты между start_date и прошлым годом (относительно инициализации класса).
+        Метод для формирования уникальной даты между start_date и end_date.
         :param start_date: дата начала
+        :param end_date: дата окончания
         :return: дата
         """
         start = self._cache.get(start_date)
@@ -184,26 +185,10 @@ class UniqueInterface:
             start = parse_date(now=self._now, value=start_date).year
             self._cache[start_date] = start
 
-        end = self._current_year - 1
-        if start >= end:
-            start -= 2
-
-        return self._generate_unique_value(func=self._datetime.date, start=start, end=end)
-
-    def future_date(self, end_date: Any) -> datetime.date:
-        """
-        Метод для формирования уникальной даты между следущим годом (относительно инициализации класса) и end_date.
-        :param end_date: дата окончания
-        :return: дата
-        """
         end = self._cache.get(end_date)
         if not end:
             end = parse_date(now=self._now, value=end_date).year
             self._cache[end_date] = end
-
-        start = self._current_year + 1
-        if end <= start:
-            end += 2
 
         return self._generate_unique_value(func=self._datetime.date, start=start, end=end)
 
@@ -337,10 +322,11 @@ class MimesisInterface:
         """
         return self._address.address()
 
-    def past_date(self, start_date: Any) -> datetime.date:
+    def date_between_dates(self, start_date: Any, end_date: Any) -> datetime.date:
         """
-        Метод для формирования даты между start_date и прошым годом (относительно инициализации класса).
+        Метод для формирования даты между start_date и end_date.
         :param start_date: дата начала
+        :param end_date: дата окончания
         :return: дата
         """
         start = self._cache.get(start_date)
@@ -348,26 +334,10 @@ class MimesisInterface:
             start = parse_date(now=self._now, value=start_date).year
             self._cache[start_date] = start
 
-        end = self._current_year - 1
-        if start >= end:
-            start -= 2
-
-        return self._datetime.date(start=start, end=end)
-
-    def future_date(self, end_date: Any) -> datetime.date:
-        """
-        Метод для формирования даты между следующим годом (относительно инициализации класса) и end_date.
-        :param end_date: дата окончания
-        :return: дата
-        """
         end = self._cache.get(end_date)
         if not end:
             end = parse_date(now=self._now, value=end_date).year
             self._cache[end_date] = end
-
-        start = self._current_year + 1
-        if end <= start:
-            end += 2
 
         return self._datetime.date(start=start, end=end)
 
