@@ -30,7 +30,7 @@ class Mutator:
         """
         self._now = datetime.datetime.now()
         self._today = self._now.date()
-        self._cache = {}
+        self._cache = {}  # type: ignore
         if use_mimesis:
             self._faker = MimesisInterface(locale=locale)
             return
