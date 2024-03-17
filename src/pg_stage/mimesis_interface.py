@@ -20,7 +20,7 @@ for name, sym in [
 regex = re.compile(timedelta_pattern)
 
 
-def _parse_date_string(value: str) -> Dict[str, float]:
+def parse_date_string(value: str) -> Dict[str, float]:
     """
     Метод для парсинга строки с датой.
     :param value: значение для парсинга
@@ -54,7 +54,7 @@ def _parse_date_string(value: str) -> Dict[str, float]:
     return time_params
 
 
-def _parse_date(now: datetime.datetime, value: Any) -> datetime.date:
+def parse_date(now: datetime.datetime, value: Any) -> datetime.date:
     """
     Метод для парсинга даты из строки.
     :param now: текущая дата и время
@@ -74,7 +74,7 @@ def _parse_date(now: datetime.datetime, value: Any) -> datetime.date:
         if value in ('today', 'now'):
             return now.date()
 
-        time_params = _parse_date_string(value)
+        time_params = parse_date_string(value)
         return (now + datetime.timedelta(**time_params)).date()
     if isinstance(value, int):
         return (now + datetime.timedelta(value)).date()
@@ -181,7 +181,7 @@ class UniqueInterface:
         """
         start = self._cache.get(start_date)
         if not start:
-            start = _parse_date(now=self._now, value=start_date).year
+            start = parse_date(now=self._now, value=start_date).year
             self._cache[start_date] = start
 
         end = self._current_year - 1
@@ -198,7 +198,7 @@ class UniqueInterface:
         """
         end = self._cache.get(end_date)
         if not end:
-            end = _parse_date(now=self._now, value=end_date).year
+            end = parse_date(now=self._now, value=end_date).year
             self._cache[end_date] = end
 
         start = self._current_year + 1
@@ -345,7 +345,7 @@ class MimesisInterface:
         """
         start = self._cache.get(start_date)
         if not start:
-            start = _parse_date(now=self._now, value=start_date).year
+            start = parse_date(now=self._now, value=start_date).year
             self._cache[start_date] = start
 
         end = self._current_year - 1
@@ -362,7 +362,7 @@ class MimesisInterface:
         """
         end = self._cache.get(end_date)
         if not end:
-            end = _parse_date(now=self._now, value=end_date).year
+            end = parse_date(now=self._now, value=end_date).year
             self._cache[end_date] = end
 
         start = self._current_year + 1
