@@ -27,6 +27,7 @@ class Mutator:
         Метод инициализации класса.
         :param locale: локализация для Faker
         :param use_mimesis: использовать библиотеку mimesis вместо faker
+        TODO: faker будет заменен на mimesis в будущих версиях
         """
         self._now = datetime.datetime.now()
         self._today = self._now.date()
