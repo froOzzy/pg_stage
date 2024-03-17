@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pg_stage"
-version = "0.2.0"
+version = "0.3.0"
 description = "Anonymization of data in pg_dump"
 authors = ["froOzzy"]
 
@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pg_stage"
-version = "0.2.0"
+version = "0.3.0"
 authors = [
   { name="froOzzy", email="ieme5gll6u78@mail.ru" },
 ]
