@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pg_stage"
-version = "2.0.0"
+version = "0.2.0"
 description = "Anonymization of data in pg_dump"
 authors = ["froOzzy"]
 
@@ -10,13 +10,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pg_stage"
-version = "2.0.0"
+version = "0.2.0"
 authors = [
   { name="froOzzy", email="ieme5gll6u78@mail.ru" },
 ]
 description = "Anonymization of data in pg_dump"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
