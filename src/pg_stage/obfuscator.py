@@ -19,7 +19,7 @@ class Obfuscator:
     def __init__(
         self,
         delimiter: str = '\t',
-        locale: str = 'en_US',
+        locale: str = 'en',
         delete_tables_by_pattern: Optional[List[str]] = None,
     ) -> None:
         """
