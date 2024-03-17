@@ -1,8 +1,9 @@
 import random
+import datetime
 from typing import Any, List
 
 from faker import Faker
-from pg_stage.mimesis_interface import MimesisInterface
+from pg_stage.mimesis_interface import MimesisInterface, parse_date
 
 
 class Mutator:
@@ -26,7 +27,11 @@ class Mutator:
         Метод инициализации класса.
         :param locale: локализация для Faker
         :param use_mimesis: использовать библиотеку mimesis вместо faker
+        TODO: faker будет заменен на mimesis в будущих версиях
         """
+        self._now = datetime.datetime.now()
+        self._today = self._now.date()
+        self._cache = {}  # type: ignore
         if use_mimesis:
             self._faker = MimesisInterface(locale=locale)
             return
@@ -163,10 +168,17 @@ class Mutator:
         start_date: str = kwargs.get('start_date', '-30d')
         date_format: str = kwargs.get('date_format', '%Y-%m-%d')
         unique: bool = kwargs.get('unique', False)
-        if unique:
-            return self._faker.unique.past_date(start_date=start_date).strftime(date_format)
+        date_start = self._cache.get(start_date)
+        if not date_start:
+            date_start = parse_date(now=self._now, value=start_date)
+            self._cache[start_date] = date_start
 
-        return self._faker.past_date(start_date=start_date).strftime(date_format)
+        if unique:
+            return self._faker.unique.date_between_dates(date_start=date_start, date_end=self._today).strftime(
+                date_format,
+            )
+
+        return self._faker.date_between_dates(date_start=date_start, date_end=self._today).strftime(date_format)
 
     def mutation_future_date(self, **kwargs: Any) -> str:
         """
@@ -179,10 +191,17 @@ class Mutator:
         end_date: str = kwargs.get('end_date', '+30d')
         date_format: str = kwargs.get('date_format', '%Y-%m-%d')
         unique: bool = kwargs.get('unique', False)
-        if unique:
-            return self._faker.unique.future_date(end_date=end_date).strftime(date_format)
+        date_end = self._cache.get(end_date)
+        if not date_end:
+            date_end = parse_date(now=self._now, value=date_end)
+            self._cache[end_date] = date_end
 
-        return self._faker.future_date(end_date=end_date).strftime(date_format)
+        if unique:
+            return self._faker.unique.date_between_dates(date_start=self._today, date_end=date_end).strftime(
+                date_format,
+            )
+
+        return self._faker.date_between_dates(date_start=self._today, date_end=date_end).strftime(date_format)
 
     def mutation_uri(self, **kwargs: Any) -> str:
         """

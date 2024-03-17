@@ -20,7 +20,7 @@ for name, sym in [
 regex = re.compile(timedelta_pattern)
 
 
-def _parse_date_string(value: str) -> Dict[str, float]:
+def parse_date_string(value: str) -> Dict[str, float]:
     """
     Метод для парсинга строки с датой.
     :param value: значение для парсинга
@@ -54,7 +54,7 @@ def _parse_date_string(value: str) -> Dict[str, float]:
     return time_params
 
 
-def _parse_date(now: datetime.datetime, value: Any) -> datetime.date:
+def parse_date(now: datetime.datetime, value: Any) -> datetime.date:
     """
     Метод для парсинга даты из строки.
     :param now: текущая дата и время
@@ -74,7 +74,7 @@ def _parse_date(now: datetime.datetime, value: Any) -> datetime.date:
         if value in ('today', 'now'):
             return now.date()
 
-        time_params = _parse_date_string(value)
+        time_params = parse_date_string(value)
         return (now + datetime.timedelta(**time_params)).date()
     if isinstance(value, int):
         return (now + datetime.timedelta(value)).date()
@@ -173,37 +173,22 @@ class UniqueInterface:
         """
         return self._generate_unique_value(func=self._address.address)
 
-    def past_date(self, start_date: Any) -> datetime.date:
+    def date_between_dates(self, date_start: Any, date_end: Any) -> datetime.date:
         """
-        Метод для формирования уникальной даты между start_date и прошлым годом (относительно инициализации класса).
-        :param start_date: дата начала
+        Метод для формирования уникальной даты между date_start и date_end.
+        :param date_start: дата начала
+        :param date_end: дата окончания
         :return: дата
         """
-        start = self._cache.get(start_date)
+        start = self._cache.get(date_start)
         if not start:
-            start = _parse_date(now=self._now, value=start_date).year
-            self._cache[start_date] = start
+            start = parse_date(now=self._now, value=date_start).year
+            self._cache[date_start] = start
 
-        end = self._current_year - 1
-        if start >= end:
-            start -= 2
-
-        return self._generate_unique_value(func=self._datetime.date, start=start, end=end)
-
-    def future_date(self, end_date: Any) -> datetime.date:
-        """
-        Метод для формирования уникальной даты между следущим годом (относительно инициализации класса) и end_date.
-        :param end_date: дата окончания
-        :return: дата
-        """
-        end = self._cache.get(end_date)
+        end = self._cache.get(date_end)
         if not end:
-            end = _parse_date(now=self._now, value=end_date).year
-            self._cache[end_date] = end
-
-        start = self._current_year + 1
-        if end <= start:
-            end += 2
+            end = parse_date(now=self._now, value=date_end).year
+            self._cache[date_end] = end
 
         return self._generate_unique_value(func=self._datetime.date, start=start, end=end)
 
@@ -337,37 +322,22 @@ class MimesisInterface:
         """
         return self._address.address()
 
-    def past_date(self, start_date: Any) -> datetime.date:
+    def date_between_dates(self, date_start: Any, date_end: Any) -> datetime.date:
         """
-        Метод для формирования даты между start_date и прошым годом (относительно инициализации класса).
-        :param start_date: дата начала
+        Метод для формирования даты между date_start и date_end.
+        :param date_start: дата начала
+        :param date_end: дата окончания
         :return: дата
         """
-        start = self._cache.get(start_date)
+        start = self._cache.get(date_start)
         if not start:
-            start = _parse_date(now=self._now, value=start_date).year
-            self._cache[start_date] = start
+            start = parse_date(now=self._now, value=date_start).year
+            self._cache[date_start] = start
 
-        end = self._current_year - 1
-        if start >= end:
-            start -= 2
-
-        return self._datetime.date(start=start, end=end)
-
-    def future_date(self, end_date: Any) -> datetime.date:
-        """
-        Метод для формирования даты между следующим годом (относительно инициализации класса) и end_date.
-        :param end_date: дата окончания
-        :return: дата
-        """
-        end = self._cache.get(end_date)
+        end = self._cache.get(date_end)
         if not end:
-            end = _parse_date(now=self._now, value=end_date).year
-            self._cache[end_date] = end
-
-        start = self._current_year + 1
-        if end <= start:
-            end += 2
+            end = parse_date(now=self._now, value=date_end).year
+            self._cache[date_end] = end
 
         return self._datetime.date(start=start, end=end)
 
