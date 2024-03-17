@@ -21,19 +21,17 @@ class Obfuscator:
         delimiter: str = '\t',
         locale: str = 'en_US',
         delete_tables_by_pattern: Optional[List[str]] = None,
-        use_mimesis: bool = False,
     ) -> None:
         """
         Метод инициализации класса.
         :param delimiter: разделитель
         :param locale: локализация для Faker
         :param delete_tables_by_pattern: список таблиц, которые нужно очистить по паттерну
-        :param use_mimesis: использовать библиотеку mimesis вместо faker
         """
         self.delimiter = delimiter
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
         self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
-        self._mutator = Mutator(locale=locale, use_mimesis=use_mimesis)
+        self._mutator = Mutator(locale=locale)
         self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
         self._is_data: bool = False

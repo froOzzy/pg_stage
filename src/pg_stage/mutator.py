@@ -1,9 +1,9 @@
 import random
 import datetime
-from typing import Any, List
+from typing import Any, Callable, List
 
-from faker import Faker
-from pg_stage.mimesis_interface import MimesisInterface, parse_date
+from mimesis import Person, Address, Datetime, Internet, Numbers
+from mimesis.builtins import RussiaSpecProvider
 
 
 class Mutator:
@@ -22,25 +22,37 @@ class Mutator:
     min_value_bigserial = 1
     max_value_bigserial = 9223372036854775807
 
-    def __init__(self, locale: str = 'en_US', use_mimesis: bool = False) -> None:
+    def __init__(self, locale: str = 'en') -> None:
         """
         Метод инициализации класса.
         :param locale: локализация для Faker
-        :param use_mimesis: использовать библиотеку mimesis вместо faker
-        TODO: faker будет заменен на mimesis в будущих версиях
         """
+        self._locale = locale
+        self._is_russian_locale = locale == 'ru'
+        self._person = Person(locale=self._locale)
+        self._address = Address(locale=self._locale)
+        self._datetime = Datetime(locale=self._locale)
+        self._internet = Internet()
+        self._numeric = Numbers()
+        self._russian_provider = RussiaSpecProvider()
+        self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
-        self._today = self._now.date()
         self._cache = {}  # type: ignore
-        if use_mimesis:
-            self._faker = MimesisInterface(locale=locale)
-            return
-
-        self._faker = Faker(locale=locale)
+        self._unique_values = set()  # type: ignore
 
     def clear_unique_values(self) -> None:
         """Метод для сброса уникальных значений."""
-        self._faker.unique.clear()
+        self._unique_values.clear()
+
+    def _generate_unique_value(self, func: Callable[[Any], Any], *args: Any, **kwargs: Any) -> Any:
+        """Метод для генерации уникального значения."""
+        while True:
+            value = func(*args, **kwargs)
+            if not set(value) & self._unique_values:
+                self._unique_values.add(value)
+                break
+
+        return value
 
     def mutation_email(self, **kwargs: bool) -> str:
         """
@@ -50,9 +62,9 @@ class Mutator:
         :return: email
         """
         if kwargs.get('unique'):
-            return self._faker.unique.email()
+            return self._generate_unique_value(func=self._person.email)
 
-        return self._faker.email()
+        return self._person.email()
 
     @staticmethod
     def mutation_empty_string(**_: Any) -> str:
@@ -81,9 +93,22 @@ class Mutator:
         :return: ФИО
         """
         if kwargs.get('unique'):
-            return self._faker.unique.name()
+            while True:
+                if self._is_russian_locale:
+                    value = f'{self._person.full_name(reverse=True)} {self._russian_provider.patronymic()}'
+                else:
+                    value = self._person.full_name(reverse=True)
 
-        return self._faker.name()
+                if not set(value) & self._unique_values:
+                    self._unique_values.add(value)
+                    break
+
+            return value
+
+        if self._is_russian_locale:
+            return f'{self._person.full_name(reverse=True)} {self._russian_provider.patronymic()}'
+
+        return self._person.full_name(reverse=True)
 
     def mutation_first_name(self, **kwargs: bool) -> str:
         """
@@ -93,9 +118,9 @@ class Mutator:
         :return: имя
         """
         if kwargs.get('unique'):
-            return self._faker.unique.first_name()
+            return self._generate_unique_value(func=self._person.name)
 
-        return self._faker.first_name()
+        return self._person.name()
 
     def mutation_middle_name(self, **kwargs: bool) -> str:
         """
@@ -104,10 +129,13 @@ class Mutator:
             unique - сгенерировать уникальное отчество
         :return: отчество
         """
-        if kwargs.get('unique'):
-            return self._faker.unique.middle_name()
+        if not self._is_russian_locale:
+            raise ValueError('Mutation middle_name dont work not Russian locale!')
 
-        return self._faker.middle_name()
+        if kwargs.get('unique'):
+            return self._generate_unique_value(func=self._russian_provider.patronymic)
+
+        return self._russian_provider.patronymic()
 
     def mutation_last_name(self, **kwargs: bool) -> str:
         """
@@ -117,9 +145,9 @@ class Mutator:
         :return: фамилия
         """
         if kwargs.get('unique'):
-            return self._faker.unique.last_name()
+            return self._generate_unique_value(func=self._person.surname)
 
-        return self._faker.last_name()
+        return self._person.surname()
 
     @staticmethod
     def mutation_null(**_: Any) -> str:
@@ -134,16 +162,16 @@ class Mutator:
         """
         Метод для генерации номера телефона.
         :param kwargs:
-            format - формат номера, например +7 (XXX) XXX XX XX
+            mask - формат номера, например +7 (XXX) XXX XX XX
             unique - сгенерировать уникальный номер
         :return: номер телефона
         """
-        phone_format: str = kwargs['format']
+        phone_format: str = kwargs['mask']
         unique: bool = kwargs.get('unique', False)
         if unique:
-            return self._faker.unique.numerify(phone_format)
+            return self._generate_unique_value(func=self._person.identifier, mask=phone_format)
 
-        return self._faker.numerify(phone_format)
+        return self._person.identifier(mask=phone_format)
 
     def mutation_address(self, **kwargs: bool) -> str:
         """
@@ -153,55 +181,27 @@ class Mutator:
         :return: адрес
         """
         if kwargs.get('unique'):
-            return self._faker.unique.address()
+            return self._generate_unique_value(func=self._address.address)
 
-        return self._faker.address()
+        return self._address.address()
 
-    def mutation_past_date(self, **kwargs: Any) -> str:
+    def mutation_date(self, **kwargs: Any) -> str:
         """
-        Метод для генерации даты в прошедшем времени.
+        Метод для генерации даты между start и end годами.
         :param kwargs:
-            start_date - самая ранняя допустимая дата в strtotime() формате, по умолчанию -30d
+            start - год начала
+            end - год окончания
             date_format - формат даты, по умолчанию '%Y-%m-%d'
         :return: дата в прошедшем времени
         """
-        start_date: str = kwargs.get('start_date', '-30d')
-        date_format: str = kwargs.get('date_format', '%Y-%m-%d')
+        start: int = kwargs.get('start', self._now.year - 1)
+        end: int = kwargs.get('end', self._now.year)
+        date_format: int = kwargs.get('date_format', '%Y-%m-%d')
         unique: bool = kwargs.get('unique', False)
-        date_start = self._cache.get(start_date)
-        if not date_start:
-            date_start = parse_date(now=self._now, value=start_date)
-            self._cache[start_date] = date_start
-
         if unique:
-            return self._faker.unique.date_between_dates(date_start=date_start, date_end=self._today).strftime(
-                date_format,
-            )
+            return self._generate_unique_value(func=self._datetime.date, start=start, end=end).strftime(date_format)
 
-        return self._faker.date_between_dates(date_start=date_start, date_end=self._today).strftime(date_format)
-
-    def mutation_future_date(self, **kwargs: Any) -> str:
-        """
-        Метод для генерации даты в будущем времени.
-        :param kwargs:
-            end_date - самая поздняя допустимая дата в strtotime() формате, по умолчанию +30d
-            date_format - формат даты, по умолчанию '%Y-%m-%d'
-        :return: дата в будущем времени
-        """
-        end_date: str = kwargs.get('end_date', '+30d')
-        date_format: str = kwargs.get('date_format', '%Y-%m-%d')
-        unique: bool = kwargs.get('unique', False)
-        date_end = self._cache.get(end_date)
-        if not date_end:
-            date_end = parse_date(now=self._now, value=date_end)
-            self._cache[end_date] = date_end
-
-        if unique:
-            return self._faker.unique.date_between_dates(date_start=self._today, date_end=date_end).strftime(
-                date_format,
-            )
-
-        return self._faker.date_between_dates(date_start=self._today, date_end=date_end).strftime(date_format)
+        return self._datetime.date(start=start, end=end).strftime(date_format)
 
     def mutation_uri(self, **kwargs: Any) -> str:
         """
@@ -213,33 +213,21 @@ class Mutator:
         max_length: int = kwargs.get('max_length', 2048)
         unique: bool = kwargs.get('unique', False)
         if unique:
-            return self._faker.unique.uri()[:max_length]
+            return self._generate_unique_value(func=self._internet.home_page)[:max_length]
 
-        return self._faker.uri()[:max_length]
+        return self._internet.home_page()[:max_length]
 
-    def mutation_ipv4_public(self, **kwargs: bool) -> str:
+    def mutation_ipv4(self, **kwargs: bool) -> str:
         """
-        Метод для генерации публичного ip-адреса 4 версии.
+        Метод для генерации ip-адреса 4 версии.
         :param kwargs:
             unique - сгенерировать уникальный ip-адрес
         :return: ip-адрес
         """
         if kwargs.get('unique'):
-            return self._faker.unique.ipv4_public()
+            return self._generate_unique_value(func=self._internet.ip_v4)
 
-        return self._faker.ipv4_public()
-
-    def mutation_ipv4_private(self, **kwargs: bool) -> str:
-        """
-        Метод для генерации приватного ip-адреса 4-й версии.
-        :param kwargs:
-            unique - сгенерировать уникальный ip-адрес
-        :return: ip-адрес
-        """
-        if kwargs.get('unique'):
-            return self._faker.unique.ipv4_private()
-
-        return self._faker.ipv4_private()
+        return self._internet.ip_v4()
 
     def mutation_ipv6(self, **kwargs: bool) -> str:
         """
@@ -249,14 +237,14 @@ class Mutator:
         :return: ip-адрес
         """
         if kwargs.get('unique'):
-            return self._faker.unique.ipv6()
+            return self._generate_unique_value(func=self._internet.ip_v6)
 
-        return self._faker.ipv6()
+        return self._internet.ip_v6()
 
     @staticmethod
     def mutation_random_choice(**kwargs: List[Any]) -> str:
         """
-        Метод для формирования случайного значения из списка
+        Метод для формирования случайного значения из списка.
         :param kwargs:
             choices - список значений
         :return: случайное значение
@@ -269,222 +257,194 @@ class Mutator:
 
     def mutation_numeric_smallint(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата smallint
+        Метод для формирования случайного числа формата smallint.
         :param kwargs:
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        min_value = kwargs.get('min_value', self.min_value_smallint)
-        max_value = kwargs.get('max_value', self.max_value_smallint)
-        if min_value < self.min_value_smallint or max_value > self.max_value_smallint:
+        start = kwargs.get('start', self.min_value_smallint)
+        end = kwargs.get('end', self.max_value_smallint)
+        if start < self.min_value_smallint or end > self.max_value_smallint:
             raise ValueError(
-                f'The min_value and max_value values must be between {self.min_value_smallint} '
+                f'The start and end values must be between {self.min_value_smallint} '
                 f'and {self.max_value_smallint}',
             )
 
         if kwargs.get('unique'):
-            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+            return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
 
-        return str(self._faker.random_int(min=min_value, max=max_value))
+        return str(self._numeric.integer_number(start=start, end=end))
 
     def mutation_numeric_integer(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата int
+        Метод для формирования случайного числа формата int.
         :param kwargs:
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        min_value = kwargs.get('min_value', self.min_value_integer)
-        max_value = kwargs.get('max_value', self.max_value_integer)
-        if min_value < self.min_value_integer or max_value > self.max_value_integer:
+        start = kwargs.get('start', self.min_value_integer)
+        end = kwargs.get('end', self.max_value_integer)
+        if start < self.min_value_integer or end > self.max_value_integer:
             raise ValueError(
-                f'The min_value and max_value values must be between {self.min_value_integer} '
+                f'The start and end values must be between {self.min_value_integer} '
                 f'and {self.max_value_integer}',
             )
 
         if kwargs.get('unique'):
-            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+            return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
 
-        return str(self._faker.random_int(min=min_value, max=max_value))
+        return str(self._numeric.integer_number(start=start, end=end))
 
     def mutation_numeric_bigint(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата bigint
+        Метод для формирования случайного числа формата bigint.
         :param kwargs:
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        min_value = kwargs.get('min_value', self.min_value_bigint)
-        max_value = kwargs.get('max_value', self.max_value_bigint)
-        if min_value < self.min_value_bigint or max_value > self.max_value_bigint:
+        start = kwargs.get('start', self.min_value_bigint)
+        end = kwargs.get('end', self.max_value_bigint)
+        if start < self.min_value_bigint or end > self.max_value_bigint:
             raise ValueError(
-                f'The min_value and max_value values must be between {self.min_value_bigint} '
+                f'The start and end values must be between {self.min_value_bigint} '
                 f'and {self.max_value_bigint}',
             )
 
         if kwargs.get('unique'):
-            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+            return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
 
-        return str(self._faker.random_int(min=min_value, max=max_value))
+        return str(self._numeric.integer_number(start=start, end=end))
 
     def mutation_numeric_decimal(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата decimal
+        Метод для формирования случайного числа формата decimal.
         :param kwargs:
-            left_digits - количество символов до запятой
-            right_digits - количество символов после запятой
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+            precision - количество символов после запятой
+        :return: случайное значение в пределах [start, end]
         """
-        left_digits = kwargs['left_digits']
-        right_digits = kwargs['right_digits']
-        min_value = kwargs['min_value']
-        max_value = kwargs['max_value']
+        start = kwargs['start']
+        end = kwargs['end']
+        precision = kwargs['precision']
         if kwargs.get('unique'):
             return str(
-                self._faker.unique.pydecimal(
-                    left_digits=left_digits,
-                    right_digits=right_digits,
-                    min_value=min_value,
-                    max_value=max_value,
+                self._generate_unique_value(
+                    func=self._numeric.float_number,
+                    start=start,
+                    end=end,
+                    precision=precision,
                 ),
             )
 
-        return str(
-            self._faker.pydecimal(
-                left_digits=left_digits,
-                right_digits=right_digits,
-                min_value=min_value,
-                max_value=max_value,
-            ),
-        )
+        return str(self._numeric.float_number(start=start, end=end, precision=precision))
 
     def mutation_numeric_real(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата real
+        Метод для формирования случайного числа формата real.
         :param kwargs:
-            left_digits - количество символов до запятой
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        left_digits = kwargs['left_digits']
-        min_value = kwargs['min_value']
-        max_value = kwargs['max_value']
+        start = kwargs['start']
+        end = kwargs['end']
         if kwargs.get('unique'):
             return str(
-                self._faker.unique.pydecimal(
-                    left_digits=left_digits,
-                    right_digits=6,
-                    min_value=min_value,
-                    max_value=max_value,
+                self._generate_unique_value(
+                    func=self._numeric.float_number,
+                    start=start,
+                    end=end,
+                    precision=6,
                 ),
             )
 
-        return str(
-            self._faker.pydecimal(
-                left_digits=left_digits,
-                right_digits=6,
-                min_value=min_value,
-                max_value=max_value,
-            ),
-        )
+        return str(self._numeric.float_number(start=start, end=end, precision=6))
 
     def mutation_numeric_double_precision(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата double precision
+        Метод для формирования случайного числа формата double precision.
         :param kwargs:
-            left_digits - количество символов до запятой
-            right_digits - количество символов после запятой
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        left_digits = kwargs['left_digits']
-        min_value = kwargs['min_value']
-        max_value = kwargs['max_value']
+        start = kwargs['start']
+        end = kwargs['end']
         if kwargs.get('unique'):
             return str(
-                self._faker.unique.pydecimal(
-                    left_digits=left_digits,
-                    right_digits=15,
-                    min_value=min_value,
-                    max_value=max_value,
+                self._generate_unique_value(
+                    func=self._numeric.float_number,
+                    start=start,
+                    end=end,
+                    precision=15,
                 ),
             )
 
-        return str(
-            self._faker.pydecimal(
-                left_digits=left_digits,
-                right_digits=15,
-                min_value=min_value,
-                max_value=max_value,
-            ),
-        )
+        return str(self._numeric.float_number(start=start, end=end, precision=15))
 
     def mutation_numeric_smallserial(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата smallserial
+        Метод для формирования случайного числа формата smallserial.
         :param kwargs:
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        min_value = kwargs.get('min_value', self.min_value_smallserial)
-        max_value = kwargs.get('max_value', self.max_value_smallserial)
-        if min_value < self.min_value_smallserial or max_value > self.max_value_smallserial:
+        start = kwargs.get('start', self.min_value_smallserial)
+        end = kwargs.get('end', self.max_value_smallserial)
+        if start < self.min_value_smallserial or end > self.max_value_smallserial:
             raise ValueError(
-                f'The min_value and max_value values must be between {self.min_value_smallserial} '
+                f'The start and end values must be between {self.min_value_smallserial} '
                 f'and {self.max_value_smallserial}',
             )
 
         if kwargs.get('unique'):
-            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+            return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
 
-        return str(self._faker.random_int(min=min_value, max=max_value))
+        return str(self._numeric.integer_number(start=start, end=end))
 
     def mutation_numeric_serial(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата serial
+        Метод для формирования случайного числа формата serial.
         :param kwargs:
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        min_value = kwargs.get('min_value', self.min_value_serial)
-        max_value = kwargs.get('max_value', self.max_value_serial)
-        if min_value < self.min_value_serial or max_value > self.max_value_serial:
+        start = kwargs.get('start', self.min_value_serial)
+        end = kwargs.get('end', self.max_value_serial)
+        if start < self.min_value_serial or end > self.max_value_serial:
             raise ValueError(
-                f'The min_value and max_value values must be between {self.min_value_serial} '
+                f'The start and end values must be between {self.min_value_serial} '
                 f'and {self.max_value_serial}',
             )
 
         if kwargs.get('unique'):
-            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+            return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
 
-        return str(self._faker.random_int(min=min_value, max=max_value))
+        return str(self._numeric.integer_number(start=start, end=end))
 
     def mutation_numeric_bigserial(self, **kwargs: int) -> str:
         """
-        Метод для формирования случайного числа формата bigserial
+        Метод для формирования случайного числа формата bigserial.
         :param kwargs:
-            min_value - минимальное значение
-            max_value - максимальное значение
-        :return: случайное значение в пределах [min_value, max_value]
+            start - минимальное значение
+            end - максимальное значение
+        :return: случайное значение в пределах [start, end]
         """
-        min_value = kwargs.get('min_value', self.min_value_bigserial)
-        max_value = kwargs.get('max_value', self.max_value_bigserial)
-        if min_value < self.min_value_bigserial or max_value > self.max_value_bigserial:
+        start = kwargs.get('start', self.min_value_bigserial)
+        end = kwargs.get('end', self.max_value_bigserial)
+        if start < self.min_value_bigserial or end > self.max_value_bigserial:
             raise ValueError(
-                f'The min_value and max_value values must be between {self.min_value_bigserial} '
+                f'The start and end values must be between {self.min_value_bigserial} '
                 f'and {self.max_value_bigserial}',
             )
 
         if kwargs.get('unique'):
-            return str(self._faker.unique.random_int(min=min_value, max=max_value))
+            return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
 
-        return str(self._faker.random_int(min=min_value, max=max_value))
+        return str(self._numeric.integer_number(start=start, end=end))
