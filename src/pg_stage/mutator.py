@@ -54,6 +54,37 @@ class Mutator:
 
         return value
 
+    @staticmethod
+    def _random_int(a: int, b: int) -> int:
+        b = b - a
+        return int(random.random() * b) + a  # nosec
+
+    def _generate_string_by_mask(self, mask: str, char: str = '@', digit: str = '#') -> str:
+        """
+        Метод для генерации строки по маске.
+        :param mask: маска
+        :param char: маска символов
+        :param digit: маска цифр
+        TODO: После обновления mimesis использовать mimesis.random.Random.generate_string_by_mask
+        """
+        char_code = ord(char)
+        digit_code = ord(digit)
+
+        if char_code == digit_code:
+            raise ValueError('The same placeholder cannot be used for both numbers and characters.')
+
+        _mask = mask.encode()
+        code = bytearray(len(_mask))
+        for i, p in enumerate(_mask):
+            if p == char_code:
+                a = self._random_int(65, 91)  # A-Z
+            elif p == digit_code:
+                a = self._random_int(48, 58)  # 0-9
+            else:
+                a = p
+            code[i] = a
+        return code.decode()
+
     def mutation_email(self, **kwargs: bool) -> str:
         """
         Метод для генерации email-а.
@@ -261,6 +292,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs.get('start', self.min_value_smallint)
@@ -281,6 +313,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs.get('start', self.min_value_integer)
@@ -301,6 +334,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs.get('start', self.min_value_bigint)
@@ -322,6 +356,7 @@ class Mutator:
             start - минимальное значение
             end - максимальное значение
             precision - количество символов после запятой
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs['start']
@@ -345,6 +380,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs['start']
@@ -367,6 +403,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs['start']
@@ -389,6 +426,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs.get('start', self.min_value_smallserial)
@@ -410,6 +448,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs.get('start', self.min_value_serial)
@@ -430,6 +469,7 @@ class Mutator:
         :param kwargs:
             start - минимальное значение
             end - максимальное значение
+            unique - сгенерировать уникальное значение
         :return: случайное значение в пределах [start, end]
         """
         start = kwargs.get('start', self.min_value_bigserial)
@@ -443,3 +483,20 @@ class Mutator:
             return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
 
         return str(self._numeric.integer_number(start=start, end=end))
+
+    def mutation_string_by_mask(self, **kwargs: Any) -> str:
+        """
+        Метод для формирования строки по маске.
+        :param kwargs:
+            mask - маска
+            char - маска для символов
+            digit - маска для цифр
+            unique - сгенерировать уникальное значение
+        """
+        mask = kwargs['mask']
+        char = kwargs.get('char', '@')
+        digit = kwargs.get('digit', '#')
+        if kwargs.get('unique'):
+            return self._generate_unique_value(func=self._generate_string_by_mask, mask=mask, char=char, digit=digit)
+
+        return self._generate_string_by_mask(mask=mask, char=char, digit=digit)
