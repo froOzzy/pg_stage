@@ -267,8 +267,7 @@ class Mutator:
         end = kwargs.get('end', self.max_value_smallint)
         if start < self.min_value_smallint or end > self.max_value_smallint:
             raise ValueError(
-                f'The start and end values must be between {self.min_value_smallint} '
-                f'and {self.max_value_smallint}',
+                f'The start and end values must be between {self.min_value_smallint} and {self.max_value_smallint}',
             )
 
         if kwargs.get('unique'):
@@ -288,8 +287,7 @@ class Mutator:
         end = kwargs.get('end', self.max_value_integer)
         if start < self.min_value_integer or end > self.max_value_integer:
             raise ValueError(
-                f'The start and end values must be between {self.min_value_integer} '
-                f'and {self.max_value_integer}',
+                f'The start and end values must be between {self.min_value_integer} and {self.max_value_integer}',
             )
 
         if kwargs.get('unique'):
@@ -309,8 +307,7 @@ class Mutator:
         end = kwargs.get('end', self.max_value_bigint)
         if start < self.min_value_bigint or end > self.max_value_bigint:
             raise ValueError(
-                f'The start and end values must be between {self.min_value_bigint} '
-                f'and {self.max_value_bigint}',
+                f'The start and end values must be between {self.min_value_bigint} and {self.max_value_bigint}',
             )
 
         if kwargs.get('unique'):
@@ -419,8 +416,7 @@ class Mutator:
         end = kwargs.get('end', self.max_value_serial)
         if start < self.min_value_serial or end > self.max_value_serial:
             raise ValueError(
-                f'The start and end values must be between {self.min_value_serial} '
-                f'and {self.max_value_serial}',
+                f'The start and end values must be between {self.min_value_serial} and {self.max_value_serial}',
             )
 
         if kwargs.get('unique'):
@@ -440,8 +436,7 @@ class Mutator:
         end = kwargs.get('end', self.max_value_bigserial)
         if start < self.min_value_bigserial or end > self.max_value_bigserial:
             raise ValueError(
-                f'The start and end values must be between {self.min_value_bigserial} '
-                f'and {self.max_value_bigserial}',
+                f'The start and end values must be between {self.min_value_bigserial} and {self.max_value_bigserial}',
             )
 
         if kwargs.get('unique'):
