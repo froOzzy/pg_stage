@@ -11,7 +11,7 @@ abe9fd39-f0b3-4ec6-9006-9783fbdade07	400$8$50$ef1eb813f8d8b99d$2932a9dc75d10f135
 
 COMMENT ON COLUMN schema.table_1.email IS 'anon: [{"mutation_name": "email"}]';
 COMMENT ON COLUMN schema.table_1.password_salt IS 'anon: [{"mutation_name": "null"}]';
-COMMENT ON COLUMN schema.table_1.dt_birthday IS 'anon: [{"mutation_name": "past_date"}]';
+COMMENT ON COLUMN schema.table_1.dt_birthday IS 'anon: [{"mutation_name": "date", "mutation_kwargs": {"start": 2000, "end": 2024}}]';
 COMMENT ON COLUMN schema.table_1.crypted_password IS 'anon: [{"mutation_name": "fixed_value", "mutation_kwargs": {"value": "400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3125d3bd1ett18ffc4a8092e2616b9e5ca7954b2c52504"}}]';
 
 COPY schema.table_1 (id, email, crypted_password, dt_birthday) FROM stdin;

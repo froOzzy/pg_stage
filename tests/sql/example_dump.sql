@@ -253,7 +253,7 @@ COMMENT ON COLUMN auth_users.last_name IS 'anon: [{"mutation_name": "last_name"}
 -- Name: COLUMN auth_users.phone; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN auth_users.phone IS 'anon: [{"mutation_name": "phone_number", "mutation_kwargs": {"format": "79#########"}}]';
+COMMENT ON COLUMN auth_users.phone IS 'anon: [{"mutation_name": "phone_number", "mutation_kwargs": {"mask": "79#########"}}]';
 
 
 --
