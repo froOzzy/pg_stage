@@ -52,7 +52,7 @@ class Mutator:
                 raise RecursionError('Exceeded the number of attempts to generate a unique value!')
 
             value = func(*args, **kwargs)
-            if not set(value) & self._unique_values:
+            if value not in self._unique_values:
                 self._unique_values.add(value)
                 break
 
