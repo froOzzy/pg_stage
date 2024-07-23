@@ -1,5 +1,6 @@
 import random
 import datetime
+import uuid
 from typing import Any, Callable, List
 
 from mimesis import Person, Address, Datetime, Internet, Numbers
@@ -506,3 +507,12 @@ class Mutator:
             return self._generate_unique_value(func=self._generate_string_by_mask, mask=mask, char=char, digit=digit)
 
         return self._generate_string_by_mask(mask=mask, char=char, digit=digit)
+
+    @staticmethod
+    def mutation_uuid4(**kwargs: Any) -> str:
+        """
+        Метод для формирования uuid4
+        :param kwargs: параметры мутации - не используются
+        :return: строка uuid4
+        """
+        return str(uuid.uuid4())
