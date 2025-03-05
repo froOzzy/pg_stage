@@ -1,8 +1,8 @@
+import json
 import re
 import sys
-import json
 from collections import defaultdict
-from typing import Optional, List, Set, Dict
+from typing import Dict, List, Optional, Set
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
@@ -188,6 +188,13 @@ class Obfuscator:
                         break
 
                     continue
+
+                if 'source_column' in mutation_kwargs:
+                    source_column = mutation_kwargs['source_column']
+                    source_index = self._enumerate_table_columns.get(source_column)
+                    if source_index is None:
+                        raise ValueError(f'Column {source_column} not found in table {self._table_name}')
+                    mutation_kwargs['source_value'] = table_values[source_index]
 
                 if not mutation_relations:
                     is_obfuscated = True
