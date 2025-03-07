@@ -126,6 +126,7 @@ class Obfuscator:
                     'mutation_kwargs': mutation_param.get('mutation_kwargs', {}),
                     'mutation_relations': mutation_param.get('relations', []),
                     'mutation_conditions': mutation_param.get('conditions', []),
+                    'mutation_source_column': mutation_param.get('source_column'),
                 },
             )
 
@@ -152,10 +153,25 @@ class Obfuscator:
 
         return line
 
+    def _sort_columns_by_source_column_exists(self, table_mutations_by_column: dict) -> list:
+        """
+        Метод для сортировки столбцов на основе наличия параметра `source_column` в мутации.
+        :return: Список с верным порядком прохождения столбцов
+        """
+        independent_columns = []
+        dependent_columns = []
+        for column_name in self._enumerate_table_columns:
+            mutations_for_column = table_mutations_by_column.get(column_name)
+            if mutations_for_column and mutations_for_column[0]['mutation_source_column']:
+                dependent_columns.append(column_name)
+                continue
+            independent_columns.append(column_name)
+        return independent_columns + dependent_columns
+
     def _prepared_data(self, *, line: str) -> Optional[str]:
         """
         Метод для обработки данных.
-        :return: новая строка с данными
+        :return: Новая строка с данными
         """
         if self._is_delete:
             return None
@@ -164,12 +180,15 @@ class Obfuscator:
         if not table_mutations_by_column:
             return line
 
-        result = []
+        sorted_columns = self._sort_columns_by_source_column_exists(table_mutations_by_column)
+
+        obfuscated_values = {}
         table_values = line.split(self.delimiter)
-        for column_name, column_index in self._enumerate_table_columns.items():
+        for column_name in sorted_columns:
+            column_index = self._enumerate_table_columns[column_name]
             mutations_for_column = table_mutations_by_column.get(column_name)
             if not mutations_for_column:
-                result.append(table_values[column_index])
+                obfuscated_values[column_name] = table_values[column_index]
                 continue
 
             is_obfuscated = False
@@ -182,23 +201,23 @@ class Obfuscator:
                 mutation_kwargs = mutation_for_column['mutation_kwargs']
                 mutation_relations = mutation_for_column['mutation_relations']
                 mutation_conditions = mutation_for_column['mutation_conditions']
+                mutation_source_column = mutation_for_column['mutation_source_column']
                 if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
                     if mutation_index + 1 == len_mutations_for_column:
-                        result.append(table_values[column_index])
+                        obfuscated_values[column_name] = table_values[column_index]
                         break
 
                     continue
 
-                if 'source_column' in mutation_kwargs:
-                    source_column = mutation_kwargs['source_column']
-                    source_index = self._enumerate_table_columns.get(source_column)
+                if mutation_source_column:
+                    source_index = self._enumerate_table_columns.get(mutation_source_column)
                     if source_index is None:
-                        raise ValueError(f'Column {source_column} not found in table {self._table_name}')
-                    mutation_kwargs['source_value'] = table_values[source_index]
+                        raise ValueError(f'Column {mutation_source_column} not found in table {self._table_name}')
+                    mutation_kwargs['source_value'] = obfuscated_values[mutation_source_column]
 
                 if not mutation_relations:
                     is_obfuscated = True
-                    result.append(mutation_func(**mutation_kwargs))
+                    obfuscated_values[column_name] = mutation_func(**mutation_kwargs)
                     continue
 
                 new_value = None
@@ -229,10 +248,14 @@ class Obfuscator:
 
                     self._relation_values[relation_fk] = new_value
 
-                result.append(new_value)
+                obfuscated_values[column_name] = new_value
                 is_obfuscated = True
 
-        return self.delimiter.join(result)
+        sorted_result: list[str | None] = [None] * len(self._enumerate_table_columns)
+        for column_name, column_index in self._enumerate_table_columns.items():
+            sorted_result[column_index] = obfuscated_values[column_name]
+
+        return self.delimiter.join(sorted_result)
 
     def _parse_copy_values(self, *, line: str) -> Optional[str]:
         """
