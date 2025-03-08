@@ -524,13 +524,18 @@ class Mutator:
         текущей даты и переданного uuid namespace.
 
         :param kwargs:
-            source_value: Значение из колонки, например номер телефона.
+            source_column: Название колонки, значение которой хотим использовать.
             namespace: Uuid namespace.
         :return: Строка uuid5.
         """
-        source_value: str = kwargs.get('source_value')
+        source_column: str = kwargs.get('source_column')
+        if not source_column:
+            raise ValueError('Argument "source_column" not found')
+
+        obfuscated_values: dict = kwargs.get('obfuscated_values')
+        source_value: str = obfuscated_values.get(source_column)
         if not source_value:
-            raise ValueError('Argument "source_value" not found')
+            raise ValueError('Value of "source_column" not found')
 
         uuid_namespace = kwargs.get('namespace')
         if uuid_namespace is None:

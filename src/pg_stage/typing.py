@@ -41,7 +41,6 @@ class MapTablesValueType(TypedDict):
     mutation_kwargs: Dict[str, Any]
     mutation_relations: RelationTypeMany
     mutation_conditions: ConditionTypeMany
-    mutation_source_column: str
 
 
 MapTablesValueTypeMany = List[MapTablesValueType]
