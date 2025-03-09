@@ -536,13 +536,8 @@ class Mutator:
         if not source_value:
             raise ValueError('Value of "source_column" not found')
 
-        uuid_namespace: Optional[str] = kwargs.get('namespace')
-        if uuid_namespace is None:
+        namespace: Optional[str] = kwargs.get('namespace')
+        if namespace is None:
             raise ValueError('Argument "namespace" not found')
 
-        try:
-            uuid_namespace: uuid.UUID = uuid.UUID(uuid_namespace)
-        except Exception as e:
-            raise ValueError('Invalid uuid namespace given') from e
-
-        return str(uuid.uuid5(uuid_namespace, f'{source_value}-{self._today}'))
+        return str(uuid.uuid5(namespace, f'{source_value}-{self._today}'))
