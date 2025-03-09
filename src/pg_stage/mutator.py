@@ -517,8 +517,7 @@ class Mutator:
         """
         return str(uuid.uuid4())
 
-    @staticmethod
-    def mutation_uuid5_by_source_value(**kwargs: Any) -> str:
+    def mutation_uuid5_by_source_value(self, **kwargs: Any) -> str:
         """
         Метод для формирования uuid5 с использованием значения из указанной колонки,
         текущей даты и переданного uuid namespace.
@@ -532,20 +531,19 @@ class Mutator:
         if not source_column:
             raise ValueError('Argument "source_column" not found')
 
-        obfuscated_values: dict = kwargs.get('obfuscated_values')
+        obfuscated_values: dict[str, Any] = kwargs.get('obfuscated_values', {})
         source_value: str = obfuscated_values.get(source_column)
         if not source_value:
             raise ValueError('Value of "source_column" not found')
 
-        uuid_namespace = kwargs.get('namespace')
+        uuid_namespace: str = kwargs.get('namespace')
         if uuid_namespace is None:
             raise ValueError('Argument "namespace" not found')
 
-        if not isinstance(uuid_namespace, uuid.UUID):
-            try:
-                uuid_namespace = uuid.UUID(str(uuid_namespace))
-            except Exception as e:
-                raise ValueError('Invalid uuid namespace given') from e
+        try:
+            uuid_namespace: uuid.UUID = uuid.UUID(uuid_namespace)
+        except Exception as e:
+            raise ValueError('Invalid uuid namespace given') from e
 
-        date_today = datetime.date.today()
+        date_today: datetime.date = self._now.date()
         return str(uuid.uuid5(uuid_namespace, f'{source_value}-{date_today}'))

@@ -126,7 +126,6 @@ class Obfuscator:
                     'mutation_kwargs': mutation_param.get('mutation_kwargs', {}),
                     'mutation_relations': mutation_param.get('relations', []),
                     'mutation_conditions': mutation_param.get('conditions', []),
-                    'mutation_source_column': mutation_param.get('source_column'),
                 },
             )
 
