@@ -17,7 +17,7 @@ jobs:
         run: poetry install
 
       - name: Install pg-stage
-        run: python3 setup.py install --user
+        run: pip3 install .
 
       - name: Run tests
         run: poetry run pytest
