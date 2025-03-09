@@ -1,7 +1,7 @@
 import datetime
 import random
 import uuid
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional
 
 from mimesis import Address, Datetime, Internet, Numbers, Person
 from mimesis.builtins import RussiaSpecProvider
@@ -522,11 +522,10 @@ class Mutator:
         """
         Метод для формирования uuid5 с использованием значения из указанной колонки,
         текущей даты и переданного uuid namespace.
-
         :param kwargs:
-            source_column: Название колонки, значение которой хотим использовать.
-            namespace: Uuid namespace.
-        :return: Строка uuid5.
+            source_column: название колонки, значение которой хотим использовать.
+            namespace: uuid namespace.
+        :return: строка uuid5.
         """
         source_column: Optional[str] = kwargs.get('source_column')
         if not source_column:
