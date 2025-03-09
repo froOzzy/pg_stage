@@ -38,6 +38,7 @@ class Mutator:
         self._russian_provider = RussiaSpecProvider()
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
+        self._today = self._now.date()
         self._cache = {}  # type: ignore
         self._unique_values = set()  # type: ignore
 
@@ -527,16 +528,16 @@ class Mutator:
             namespace: Uuid namespace.
         :return: Строка uuid5.
         """
-        source_column: str = kwargs.get('source_column')
+        source_column: Optional[str] = kwargs.get('source_column')
         if not source_column:
             raise ValueError('Argument "source_column" not found')
 
         obfuscated_values: dict[str, Any] = kwargs.get('obfuscated_values', {})
-        source_value: str = obfuscated_values.get(source_column)
+        source_value: Optional[str] = obfuscated_values.get(source_column)
         if not source_value:
             raise ValueError('Value of "source_column" not found')
 
-        uuid_namespace: str = kwargs.get('namespace')
+        uuid_namespace: Optional[str] = kwargs.get('namespace')
         if uuid_namespace is None:
             raise ValueError('Argument "namespace" not found')
 
@@ -545,5 +546,4 @@ class Mutator:
         except Exception as e:
             raise ValueError('Invalid uuid namespace given') from e
 
-        date_today: datetime.date = self._now.date()
-        return str(uuid.uuid5(uuid_namespace, f'{source_value}-{date_today}'))
+        return str(uuid.uuid5(uuid_namespace, f'{source_value}-{self._today}'))
