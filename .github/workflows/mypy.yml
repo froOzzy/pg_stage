@@ -14,7 +14,7 @@ jobs:
         uses: snok/install-poetry@v1
 
       - name: Install dependencies
-        run: poetry install --group dev
+        run: poetry install --only dev
 
       - name: Run Mypy
         run: poetry run mypy src/pg_stage/. --ignore-missing-imports
