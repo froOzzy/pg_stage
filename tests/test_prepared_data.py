@@ -175,5 +175,5 @@ def test_obfuscate_uuid_by_source_column(obfuscator_object: Obfuscator):
 
     date_today = date.today()
     uuid_namespace = uuid.UUID(str('6ba7b810-9dad-11d1-80b4-00c04fd430c8'))
-    for (column_uuid, phone, last_name) in prepared_result:
+    for column_uuid, phone, last_name in prepared_result:
         assert column_uuid == str(uuid.uuid5(uuid_namespace, f'{phone}-{date_today}'))  # nosec
