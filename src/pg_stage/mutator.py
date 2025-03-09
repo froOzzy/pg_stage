@@ -540,4 +540,9 @@ class Mutator:
         if namespace is None:
             raise ValueError('Argument "namespace" not found')
 
-        return str(uuid.uuid5(namespace, f'{source_value}-{self._today}'))
+        try:
+            uuid_namespace: uuid.UUID = uuid.UUID(uuid_namespace)
+        except Exception as e:
+            raise ValueError('Invalid uuid namespace given') from e
+
+        return str(uuid.uuid5(uuid_namespace, f'{source_value}-{self._today}'))
