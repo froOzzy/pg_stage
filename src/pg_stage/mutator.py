@@ -541,7 +541,7 @@ class Mutator:
             raise ValueError('Argument "namespace" not found')
 
         try:
-            uuid_namespace: uuid.UUID = uuid.UUID(uuid_namespace)
+            uuid_namespace: uuid.UUID = uuid.UUID(namespace)
         except Exception as e:
             raise ValueError('Invalid uuid namespace given') from e
 
