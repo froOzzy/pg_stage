@@ -246,9 +246,9 @@ class Obfuscator:
                 obfuscated_values[column_name] = new_value
                 is_obfuscated = True
 
-        sorted_result: list[Optional[str]] = [None] * len(self._enumerate_table_columns)
+        sorted_result: list[str] = []
         for column_name, column_index in self._enumerate_table_columns.items():
-            sorted_result[column_index] = obfuscated_values[column_name]
+            sorted_result.append(obfuscated_values[column_name])
 
         return self.delimiter.join(sorted_result)
 
