@@ -1,9 +1,9 @@
-import random
 import datetime
+import random
 import uuid
 from typing import Any, Callable, List
 
-from mimesis import Person, Address, Datetime, Internet, Numbers
+from mimesis import Address, Datetime, Internet, Numbers, Person
 from mimesis.builtins import RussiaSpecProvider
 
 
@@ -516,3 +516,34 @@ class Mutator:
         :return: строка uuid4
         """
         return str(uuid.uuid4())
+
+    def mutation_uuid5_by_source_value(self, **kwargs: Any) -> str:
+        """
+        Метод для формирования uuid5 с использованием значения из указанной колонки,
+        текущей даты и переданного uuid namespace.
+
+        :param kwargs:
+            source_column: Название колонки, значение которой хотим использовать.
+            namespace: Uuid namespace.
+        :return: Строка uuid5.
+        """
+        source_column: str = kwargs.get('source_column')
+        if not source_column:
+            raise ValueError('Argument "source_column" not found')
+
+        obfuscated_values: dict[str, Any] = kwargs.get('obfuscated_values', {})
+        source_value: str = obfuscated_values.get(source_column)
+        if not source_value:
+            raise ValueError('Value of "source_column" not found')
+
+        uuid_namespace: str = kwargs.get('namespace')
+        if uuid_namespace is None:
+            raise ValueError('Argument "namespace" not found')
+
+        try:
+            uuid_namespace: uuid.UUID = uuid.UUID(uuid_namespace)
+        except Exception as e:
+            raise ValueError('Invalid uuid namespace given') from e
+
+        date_today: datetime.date = self._now.date()
+        return str(uuid.uuid5(uuid_namespace, f'{source_value}-{date_today}'))

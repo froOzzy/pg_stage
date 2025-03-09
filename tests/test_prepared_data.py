@@ -1,3 +1,6 @@
+import uuid
+from datetime import date
+
 from src.pg_stage.obfuscator import Obfuscator
 
 
@@ -151,3 +154,26 @@ def test_two_mutation_for_one_column(obfuscator_object: Obfuscator):
     assert prepared_result[0][0] != '79999999999'  # nosec
     assert prepared_result[1][0] != 'test@mail.ru'  # nosec
     assert prepared_result[2][0] != '89999999999'  # nosec
+
+
+def test_obfuscate_uuid_by_source_column(obfuscator_object: Obfuscator):
+    """
+    Arrange: Дамп таблицы, в которой определены мутации uuid на основе мутации другой колонки
+    Act: Вызов функции `_parse_line` класса Obfuscator
+    Assert: В stdout данные поля мутированы на основе мутированного значения другой колонки
+    """
+    with open('tests/sql/test_obfuscate_uuid_by_source_value.sql') as file:
+        dump_sql = file.read()
+
+    result = []
+    for line in dump_sql.splitlines():
+        new_line = obfuscator_object._parse_line(line=line)
+        if new_line is not None:
+            result.append(new_line)
+
+    prepared_result = [line.split('\t') for line in result if '111n' in line or '222n' in line or '333n' in line]
+
+    date_today = date.today()
+    uuid_namespace = uuid.UUID(str('6ba7b810-9dad-11d1-80b4-00c04fd430c8'))
+    for (column_uuid, phone, last_name) in prepared_result:
+        assert column_uuid == str(uuid.uuid5(uuid_namespace, f'{phone}-{date_today}'))  # nosec
