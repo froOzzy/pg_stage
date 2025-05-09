@@ -4,6 +4,16 @@ version = "0.3.5"
 description = "Anonymization of data in pg_dump"
 authors = ["froOzzy"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["*"]
+
+[tool.ruff.format]
+quote-style = "single"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -27,12 +37,6 @@ dependencies = ["mimesis == 4.1.3", "typing-extensions >= 4.5.0"]
 [project.urls]
 "Homepage" = "https://github.com/froOzzy/pg_stage"
 
-[tool.black]
-line-length = 120
-target-version = ["py39"]
-include = '\.pyi?$'
-skip-string-normalization = true
-
 [tool.poetry.dependencies]
 python = ">=3.7"
 mimesis = "4.1.3"
@@ -40,6 +44,6 @@ typing-extensions = ">=4.5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"
-black = "23.3.0"
 bandit = "1.7.5"
+ruff = "0.11.8" 
 mypy = "1.4.1"

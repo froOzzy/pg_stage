@@ -133,3 +133,9 @@ src/main.py
 
 # Benchmark
 benchmark.py
+
+# Ruff
+.ruff_cache/
+
+# poetry
+poetry.lock

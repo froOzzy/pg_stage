@@ -1,4 +1,4 @@
-name: Black
+name: Ruff
 on: push
 
 jobs:
@@ -16,5 +16,8 @@ jobs:
       - name: Install dependencies
         run: poetry install --only dev
 
-      - name: Run black
-        run: poetry run black . --diff --check --verbose
+      - name: Run ruff check
+        run: poetry run ruff check .
+
+      - name: Run ruff format
+        run: poetry run ruff format .
