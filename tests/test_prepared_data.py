@@ -4,7 +4,7 @@ from datetime import date
 from src.pg_stage.obfuscator import Obfuscator
 
 
-def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator):
+def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator) -> None:
     """
     Arrange: Дамп таблиц, данные которых необходимо удалить
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -31,7 +31,7 @@ def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator):
     assert assert_result == result  # nosec
 
 
-def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
+def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator) -> None:
     """
     Arrange: Дамп таблиц, в которых необходимо мутировать одно или несколько полей
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -40,7 +40,13 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
     with open('tests/sql/test_parse_copy_values_with_mutation.sql') as file:
         dump_sql = file.read()
 
-    emails = {'cj@example.com', 'leo@example.com', 'donna@example.com', 'charlie@example.com', 'fun@example.com'}
+    emails = {
+        'cj@example.com',
+        'leo@example.com',
+        'donna@example.com',
+        'charlie@example.com',
+        'fun@example.com',
+    }
     birthdays = {'1996-10-02', '1996-10-03', '2005-01-02', '2005-10-02', '2022-12-31'}
     tokens = {
         '86a97ff982e87ed5af7d90ab2ce31d4e89a3af3e6a0490b067bb8213aea7a4ee0eeafae1d8fe3c6f990aead095092fcf852004b18'
@@ -68,14 +74,14 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator):
     for line in dump_sql.splitlines():
         new_line = obfuscator_object._parse_line(line=line)
         if new_line and 'COPY' not in new_line and 'COMMENT' not in new_line and '\\.' not in line:
-            assert not any([email in new_line for email in emails])  # nosec
-            assert not any([birthday in new_line for birthday in birthdays])  # nosec
-            assert not any([token in new_line for token in tokens])  # nosec
-            assert not any([password_salt in new_line for password_salt in password_salts])  # nosec
+            assert not any(email in new_line for email in emails)  # nosec
+            assert not any(birthday in new_line for birthday in birthdays)  # nosec
+            assert not any(token in new_line for token in tokens)  # nosec
+            assert not any(password_salt in new_line for password_salt in password_salts)  # nosec
             assert crypted_password in new_line  # nosec
 
 
-def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):
+def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator) -> None:
     """
     Arrange: Дамп таблиц, в которых необходимо мутировать одно связанное поле
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -93,18 +99,32 @@ def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator):
     index_copy_table4 = result.index('20f654fe-b27d-4051-9fd4-000000000001\t111n\tLourense') - 1
     assert 'table_4' in result[index_copy_table4]  # nosec
     assert (  # nosec
-        len([line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000001\t111n\tLourense']) == 1
+        len(
+            [line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000001\t111n\tLourense'],
+        )
+        == 1
     )
-    assert len([line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000002\t222n\tKent']) == 1  # nosec
+    assert (
+        len(
+            [line for line in result if line == '20f654fe-b27d-4051-9fd4-000000000002\t222n\tKent'],
+        )
+        == 1
+    )  # nosec
     assert (  # nosec
-        len({line for line in result if '20f654fe-b27d-4051-9fd4-000000000001' in line and '111n' not in line}) == 1
+        len(
+            {line for line in result if '20f654fe-b27d-4051-9fd4-000000000001' in line and '111n' not in line},
+        )
+        == 1
     )
     assert (  # nosec
-        len({line for line in result if '20f654fe-b27d-4051-9fd4-000000000002' in line and '222n' not in line}) == 1
+        len(
+            {line for line in result if '20f654fe-b27d-4051-9fd4-000000000002' in line and '222n' not in line},
+        )
+        == 1
     )
 
 
-def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator):
+def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator) -> None:
     """
     Arrange: Дамп таблицы, в которой необходимо мутировать данные с связанным полем внутри таблицы
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -128,7 +148,7 @@ def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator):
     assert prepared_result[1][0] == prepared_result[1][1]  # nosec
 
 
-def test_two_mutation_for_one_column(obfuscator_object: Obfuscator):
+def test_two_mutation_for_one_column(obfuscator_object: Obfuscator) -> None:
     """
     Arrange: Дамп таблицы, в которой необходимо мутировать данные с двумя видами мутации
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -156,7 +176,7 @@ def test_two_mutation_for_one_column(obfuscator_object: Obfuscator):
     assert prepared_result[2][0] != '89999999999'  # nosec
 
 
-def test_obfuscate_uuid_by_source_column(obfuscator_object: Obfuscator):
+def test_obfuscate_uuid_by_source_column(obfuscator_object: Obfuscator) -> None:
     """
     Arrange: Дамп таблицы, в которой определены мутации uuid на основе мутации другой колонки
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -175,5 +195,5 @@ def test_obfuscate_uuid_by_source_column(obfuscator_object: Obfuscator):
 
     date_today = date.today()
     uuid_namespace = uuid.UUID(str('6ba7b810-9dad-11d1-80b4-00c04fd430c8'))
-    for column_uuid, phone, last_name in prepared_result:
+    for column_uuid, phone, _ in prepared_result:
         assert column_uuid == str(uuid.uuid5(uuid_namespace, f'{phone}-{date_today}'))  # nosec

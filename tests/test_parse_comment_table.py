@@ -3,8 +3,11 @@ import pytest
 from src.pg_stage.obfuscator import Obfuscator
 
 
-@pytest.mark.parametrize("table_name", ['table', 'schema.table'])
-def test_parse_comment_table_with_mutation(obfuscator_object: Obfuscator, table_name: str):
+@pytest.mark.parametrize('table_name', ['table', 'schema.table'])
+def test_parse_comment_table_with_mutation(
+    obfuscator_object: Obfuscator,
+    table_name: str,
+) -> None:
     """
     Arrange: Строка, в которой есть комментарий к таблице
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -16,8 +19,11 @@ def test_parse_comment_table_with_mutation(obfuscator_object: Obfuscator, table_
     assert table_name in obfuscator_object._delete_tables  # nosec
 
 
-@pytest.mark.parametrize("table_name", ['table', 'schema.table'])
-def test_parse_comment_table_with_invalid_mutation(obfuscator_object: Obfuscator, table_name: str):
+@pytest.mark.parametrize('table_name', ['table', 'schema.table'])
+def test_parse_comment_table_with_invalid_mutation(
+    obfuscator_object: Obfuscator,
+    table_name: str,
+) -> None:
     """
     Arrange: Строка, в которой есть невалидный комментарий к таблице
     Act: Вызов функции `_parse_line` класса Obfuscator

@@ -51,7 +51,8 @@ class Mutator:
         counter = 0
         while True:
             if counter > 1000:
-                raise RecursionError('Exceeded the number of attempts to generate a unique value!')
+                msg = 'Exceeded the number of attempts to generate a unique value!'
+                raise RecursionError(msg)
 
             value = func(*args, **kwargs)
             if value not in self._unique_values:
@@ -79,7 +80,8 @@ class Mutator:
         digit_code = ord(digit)
 
         if char_code == digit_code:
-            raise ValueError('The same placeholder cannot be used for both numbers and characters.')
+            msg = 'The same placeholder cannot be used for both numbers and characters'
+            raise ValueError(msg)
 
         _mask = mask.encode()
         code = bytearray(len(_mask))
@@ -169,7 +171,8 @@ class Mutator:
         :return: отчество
         """
         if not self._is_russian_locale:
-            raise ValueError('Mutation middle_name dont work not Russian locale!')
+            msg = 'Mutation middle_name dont work not Russian locale!'
+            raise ValueError(msg)
 
         if kwargs.get('unique'):
             return self._generate_unique_value(func=self._russian_provider.patronymic)
@@ -290,7 +293,8 @@ class Mutator:
         """
         choices = kwargs.get('choices', [])
         if not choices:
-            raise ValueError('Key choices not found!')
+            msg = 'Key choices not found!'
+            raise ValueError(msg)
 
         return str(random.choice(seq=choices))  # nosec
 
@@ -306,9 +310,8 @@ class Mutator:
         start = kwargs.get('start', self.min_value_smallint)
         end = kwargs.get('end', self.max_value_smallint)
         if start < self.min_value_smallint or end > self.max_value_smallint:
-            raise ValueError(
-                f'The start and end values must be between {self.min_value_smallint} and {self.max_value_smallint}',
-            )
+            msg = f'The start and end values must be between {self.min_value_smallint} and {self.max_value_smallint}.'
+            raise ValueError(msg)
 
         if kwargs.get('unique'):
             return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
@@ -327,9 +330,8 @@ class Mutator:
         start = kwargs.get('start', self.min_value_integer)
         end = kwargs.get('end', self.max_value_integer)
         if start < self.min_value_integer or end > self.max_value_integer:
-            raise ValueError(
-                f'The start and end values must be between {self.min_value_integer} and {self.max_value_integer}',
-            )
+            msg = f'The start and end values must be between {self.min_value_integer} and {self.max_value_integer}.'
+            raise ValueError(msg)
 
         if kwargs.get('unique'):
             return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
@@ -348,9 +350,8 @@ class Mutator:
         start = kwargs.get('start', self.min_value_bigint)
         end = kwargs.get('end', self.max_value_bigint)
         if start < self.min_value_bigint or end > self.max_value_bigint:
-            raise ValueError(
-                f'The start and end values must be between {self.min_value_bigint} and {self.max_value_bigint}',
-            )
+            msg = f'The start and end values must be between {self.min_value_bigint} and {self.max_value_bigint}.'
+            raise ValueError(msg)
 
         if kwargs.get('unique'):
             return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
@@ -440,10 +441,11 @@ class Mutator:
         start = kwargs.get('start', self.min_value_smallserial)
         end = kwargs.get('end', self.max_value_smallserial)
         if start < self.min_value_smallserial or end > self.max_value_smallserial:
-            raise ValueError(
+            msg = (
                 f'The start and end values must be between {self.min_value_smallserial} '
-                f'and {self.max_value_smallserial}',
+                f'and {self.max_value_smallserial}.'
             )
+            raise ValueError(msg)
 
         if kwargs.get('unique'):
             return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
@@ -462,9 +464,8 @@ class Mutator:
         start = kwargs.get('start', self.min_value_serial)
         end = kwargs.get('end', self.max_value_serial)
         if start < self.min_value_serial or end > self.max_value_serial:
-            raise ValueError(
-                f'The start and end values must be between {self.min_value_serial} and {self.max_value_serial}',
-            )
+            msg = f'The start and end values must be between {self.min_value_serial} and {self.max_value_serial}.'
+            raise ValueError(msg)
 
         if kwargs.get('unique'):
             return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
@@ -483,9 +484,8 @@ class Mutator:
         start = kwargs.get('start', self.min_value_bigserial)
         end = kwargs.get('end', self.max_value_bigserial)
         if start < self.min_value_bigserial or end > self.max_value_bigserial:
-            raise ValueError(
-                f'The start and end values must be between {self.min_value_bigserial} and {self.max_value_bigserial}',
-            )
+            msg = f'The start and end values must be between {self.min_value_bigserial} and {self.max_value_bigserial}.'
+            raise ValueError(msg)
 
         if kwargs.get('unique'):
             return str(self._generate_unique_value(func=self._numeric.integer_number, start=start, end=end))
@@ -510,7 +510,7 @@ class Mutator:
         return self._generate_string_by_mask(mask=mask, char=char, digit=digit)
 
     @staticmethod
-    def mutation_uuid4(**kwargs: Any) -> str:
+    def mutation_uuid4(**_: Any) -> str:
         """
         Метод для формирования uuid4
         :param kwargs: параметры мутации - не используются
@@ -529,20 +529,24 @@ class Mutator:
         """
         source_column: Optional[str] = kwargs.get('source_column')
         if not source_column:
-            raise ValueError('Argument "source_column" not found')
+            msg = 'Argument "source_column" not found.'
+            raise ValueError(msg)
 
         obfuscated_values: dict[str, Any] = kwargs.get('obfuscated_values', {})
         source_value: Optional[str] = obfuscated_values.get(source_column)
         if not source_value:
-            raise ValueError('Value of "source_column" not found')
+            msg = 'Value of "source_column" not found.'
+            raise ValueError(msg)
 
         namespace: Optional[str] = kwargs.get('namespace')
         if namespace is None:
-            raise ValueError('Argument "namespace" not found')
+            msg = 'Argument "namespace" not found.'
+            raise ValueError(msg)
 
         try:
             uuid_namespace: uuid.UUID = uuid.UUID(namespace)
-        except Exception as e:
-            raise ValueError('Invalid uuid namespace given') from e
+        except Exception as error:
+            msg = 'Invalid uuid namespace given.'
+            raise ValueError(msg) from error
 
         return str(uuid.uuid5(uuid_namespace, f'{source_value}-{self._today}'))

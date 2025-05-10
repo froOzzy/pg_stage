@@ -1,5 +1,6 @@
+from os.path import dirname, join
+
 from setuptools import setup
-from os.path import join, dirname
 
 setup(
     name='pg_stage',

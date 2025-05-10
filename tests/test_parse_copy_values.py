@@ -4,12 +4,15 @@ from src.pg_stage.obfuscator import Obfuscator
 
 
 @pytest.fixture(autouse=True)
-def obfuscator_object_with_delete_tables_by_pattern():
+def obfuscator_object_with_delete_tables_by_pattern() -> Obfuscator:
     return Obfuscator(delete_tables_by_pattern=[r'_table', r'schema\.\_table'])
 
 
-@pytest.mark.parametrize("table_name", ['table', 'schema.table'])
-def test_parse_copy_values_with_delete_comment(obfuscator_object: Obfuscator, table_name: str):
+@pytest.mark.parametrize('table_name', ['table', 'schema.table'])
+def test_parse_copy_values_with_delete_comment(
+    obfuscator_object: Obfuscator,
+    table_name: str,
+) -> None:
     """
     Arrange: Строка копирования данных в таблицу, которую необходимо удалить
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -23,8 +26,11 @@ def test_parse_copy_values_with_delete_comment(obfuscator_object: Obfuscator, ta
     assert obfuscator_object._is_data  # nosec
 
 
-@pytest.mark.parametrize("table_name", ['table', 'schema.table'])
-def test_parse_copy_values_without_delete_comment(obfuscator_object: Obfuscator, table_name: str):
+@pytest.mark.parametrize('table_name', ['table', 'schema.table'])
+def test_parse_copy_values_without_delete_comment(
+    obfuscator_object: Obfuscator,
+    table_name: str,
+) -> None:
     """
     Arrange: Строка копирования данных в таблицу, которую необходимо удалить
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -37,11 +43,11 @@ def test_parse_copy_values_without_delete_comment(obfuscator_object: Obfuscator,
     assert obfuscator_object._is_data  # nosec
 
 
-@pytest.mark.parametrize("table_name", ['_table', 'schema._table'])
+@pytest.mark.parametrize('table_name', ['_table', 'schema._table'])
 def test_parse_copy_values_without_delete_tables_by_pattern(
     obfuscator_object_with_delete_tables_by_pattern: Obfuscator,
     table_name: str,
-):
+) -> None:
     """
     Arrange: Строка копирования данных в таблицу, которую необходимо удалить исходя из параметра
     delete_tables_by_pattern
@@ -55,11 +61,11 @@ def test_parse_copy_values_without_delete_tables_by_pattern(
     assert obfuscator_object_with_delete_tables_by_pattern._is_data  # nosec
 
 
-@pytest.mark.parametrize("table_name", ['table', 'schema.table'])
+@pytest.mark.parametrize('table_name', ['table', 'schema.table'])
 def test_parse_copy_values_without_delete_tables_by_pattern_and_not_found_table(
     obfuscator_object_with_delete_tables_by_pattern: Obfuscator,
     table_name: str,
-):
+) -> None:
     """
     Arrange: Строка копирования данных в таблицу, которая не должна быть удалена, т.к. не входит в список
     delete_tables_by_pattern

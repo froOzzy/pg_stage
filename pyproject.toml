@@ -9,7 +9,9 @@ line-length = 120
 target-version = "py39"
 
 [tool.ruff.lint]
-select = ["*"]
+select = ["BLE", "FBT", "B", "A", "COM", "C4", "EM", "FIX", "I"]
+fixable = ["I"]
+ignore = ["COM812"]
 
 [tool.ruff.format]
 quote-style = "single"

@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Set
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
-from pg_stage.typing import ConditionTypeMany, MapTablesValueTypeMany
+from pg_stage.types import ConditionTypeMany, MapTablesValueTypeMany
 
 
 class Obfuscator:
@@ -87,7 +87,8 @@ class Obfuscator:
                 flag = re.search(pattern=value, string=column_value) is not None
                 continue
 
-            raise ValueError('Invalid condition operation')
+            msg = 'Invalid condition operation.'
+            raise ValueError(msg)
 
         return flag
 
@@ -110,7 +111,8 @@ class Obfuscator:
             mutation_name = mutation_param['mutation_name']
             mutation_func = getattr(self._mutator, f'mutation_{mutation_name}', None)
             if not mutation_func:
-                raise ValueError(f'Not found mutation {mutation_name}.')
+                msg = f'Not found mutation {mutation_name}.'
+                raise ValueError(msg)
 
             try:
                 table_name, column_name = result.group(1).split('.')
@@ -227,7 +229,8 @@ class Obfuscator:
 
                     new_value = self._relation_values.get(relation_fk)
                     if new_value is None:
-                        raise ValueError('Invalid relation fk!')
+                        msg = 'Invalid relation fk!'
+                        raise ValueError(msg)
 
                     break
 
@@ -247,7 +250,7 @@ class Obfuscator:
                 is_obfuscated = True
 
         sorted_result: list[str] = []
-        for column_name, column_index in self._enumerate_table_columns.items():
+        for column_name, _ in self._enumerate_table_columns.items():
             sorted_result.append(obfuscated_values[column_name])
 
         return self.delimiter.join(sorted_result)
