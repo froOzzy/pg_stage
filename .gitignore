@@ -139,3 +139,7 @@ benchmark.py
 
 # poetry
 poetry.lock
+
+# IDE's folders
+.idea
+.vscode
