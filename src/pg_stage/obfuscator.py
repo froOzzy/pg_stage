@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Set
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
+from pg_stage.processor import DumpProcessor, PgStageParser
 from pg_stage.types import ConditionTypeMany, MapTablesValueTypeMany
 
 
@@ -307,13 +308,20 @@ class Obfuscator:
 
         return line
 
-    def run(self, *, stdin=None) -> None:
+    def run(self, *, stdin=None, is_custom: False) -> None:
         """
         Метод для запуска обфускации.
         :param stdin: поток, с которого приходит информация в виде строк sql
+        :param is_custom: в поток приходит кастомный бинарный формат
         """
         if not stdin:
             stdin = sys.stdin
+
+        if is_custom:
+            data_parser = PgStageParser(parser=self._parse_line)
+            dump_processor = DumpProcessor(data_parser=data_parser)
+
+            return dump_processor.process_stream(process.stdout, sys.stdout.buffer)
 
         for line in stdin:
             new_line = self._parse_line(line=line.rstrip('\n'))
