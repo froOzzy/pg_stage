@@ -1,16 +1,12 @@
 import logging
-import os
 import struct
 import io
 import datetime
-import subprocess
-import sys
 import zlib
 from abc import ABCMeta, abstractmethod
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import BinaryIO, Dict, Iterator, List, Optional, Union
+from typing import BinaryIO, Iterator, Optional, Union
 
 logging.basicConfig(
     level=logging.INFO,
@@ -113,14 +109,14 @@ class TocEntry:
     table_oid: Optional[str] = None
     data_state: int = 0
     offset: Offset = 0
-    dependencies: List[DumpId] = field(default_factory=list)
+    dependencies: list[DumpId] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class Dump:
     """Полная структура файла дампа."""
     header: Header
-    toc_entries: List[TocEntry]
+    toc_entries: list[TocEntry]
 
     def get_table_data_entries(self) -> Iterator[TocEntry]:
         """
@@ -443,7 +439,7 @@ class TocParser:
         """
         self.dio = dio
 
-    def parse(self, stream: BinaryIO, version: Version) -> List[TocEntry]:
+    def parse(self, stream: BinaryIO, version: Version) -> list[TocEntry]:
         """
         Парсинг всех записей TOC.
         :param stream: поток для чтения
