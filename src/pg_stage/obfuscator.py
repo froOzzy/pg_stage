@@ -321,9 +321,11 @@ class Obfuscator:
             data_parser = PgStageParser(parser=self._parse_line)
             dump_processor = DumpProcessor(data_parser=data_parser)
 
-            return dump_processor.process_stream(process.stdout, sys.stdout.buffer)
+            return dump_processor.process_stream(stdin.buffer, sys.stdout.buffer)
 
         for line in stdin:
             new_line = self._parse_line(line=line.rstrip('\n'))
             if isinstance(new_line, str):
                 sys.stdout.write(new_line + '\n')
+
+        return None

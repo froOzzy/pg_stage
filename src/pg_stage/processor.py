@@ -161,10 +161,10 @@ class DataParser(metaclass=ABCMeta):
 class PgStageParser(DataParser):
     """Процессор обфускации из библиотеки pg_stage."""
 
-    def __init__(self, parser: Obfuscator, encoding: str = 'utf-8'):
+    def __init__(self, parser, encoding: str = 'utf-8'):
         """
         Инициализация процессора обфускации.
-        :param parser: экземпляр обфускатора
+        :param parser: функция парсинга из обфускатора
         :param encoding: кодировка для работы с текстом
         """
         self.encoding = encoding
