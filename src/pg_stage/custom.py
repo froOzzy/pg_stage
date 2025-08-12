@@ -193,7 +193,14 @@ class PgStageParser(DataParser):
 
         try:
             lines = data.decode('utf-8').split('\n')
-            processed_lines = [self.parser(line=line) if line else '' for line in lines]
+            processed_lines = []
+            for line in lines:
+                if line:
+                    line = self.parser(line=line)
+
+                if isinstance(line, str):
+                    processed_lines.append(line)
+
             return '\n'.join(processed_lines).encode(self.encoding)
         except UnicodeDecodeError as error:
             return data
