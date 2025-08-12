@@ -185,12 +185,15 @@ class PgStageParser(DataParser):
         :param data: исходные данные (строка или байты)
         :return: обработанные данные
         """
+        if not data:
+            return data
+
         if isinstance(data, str):
             return self.parser(line=data)
 
         try:
             lines = data.decode('utf-8').split('\n')
-            processed_lines = [self.parser(line=line) if line else line for line in lines]
+            processed_lines = [self.parser(line=line) if line else '' for line in lines]
             return '\n'.join(processed_lines).encode(self.encoding)
         except UnicodeDecodeError as error:
             return data
