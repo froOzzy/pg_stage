@@ -1,20 +1,17 @@
-import logging
-import struct
-import io
 import datetime
+import io
+import os
+import struct
+import sys
+import tempfile
 import zlib
 from abc import ABCMeta, abstractmethod
+from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import BinaryIO, Iterator, Optional, Union
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
-
-logger = logging.getLogger(__name__)
+from pg_stage.obfuscator import Obfuscator
 
 Version = tuple[int, int, int]
 DumpId = int
@@ -23,6 +20,7 @@ Offset = int
 
 class PostgreSQLVersions:
     """Константы версий PostgreSQL для совместимости формата дампов."""
+
     V1_12 = (1, 12, 0)
     V1_13 = (1, 13, 0)
     V1_14 = (1, 14, 0)
@@ -32,12 +30,14 @@ class PostgreSQLVersions:
 
 class OffsetPosition:
     """Константы позиции смещения."""
+
     SET = 2
     NOT_SET = 1
 
 
 class BlockType:
     """Идентификаторы типов блоков."""
+
     DATA = b'\x01'
     BLOBS = b'\x02'
     END = b'\x04'
@@ -45,23 +45,32 @@ class BlockType:
 
 class Constants:
     """Общие константы."""
+
     MAGIC_HEADER = b'PGDMP'
     CUSTOM_FORMAT = 1
     ZLIB_CHUNK_SIZE = 4096
-    DEFAULT_BUFFER_SIZE = 8192
+    DEFAULT_BUFFER_SIZE = 1024 * 1024
+    MAX_CHUNK_SIZE = 50 * 1024 * 1024
+    PROCESSING_BUFFER_SIZE = 64 * 1024
+    COMPRESSION_BUFFER_SIZE = 32 * 1024
+    COMPRESSION_LEVEL = 6
+    STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
+    LINE_BUFFER_SIZE = 1024 * 1024
 
 
 class PgDumpError(Exception):
     """Базовое исключение для ошибок обработки дампов PostgreSQL."""
+
     pass
 
 
 class CompressionMethod(Enum):
     """Поддерживаемые методы сжатия."""
-    NONE = "none"
-    GZIP = "gzip"
-    ZLIB = "zlib"
-    LZ4 = "lz4"
+
+    NONE = 'none'
+    GZIP = 'gzip'
+    ZLIB = 'zlib'
+    LZ4 = 'lz4'
 
     def __str__(self) -> str:
         return self.value
@@ -69,15 +78,17 @@ class CompressionMethod(Enum):
 
 class SectionType(Enum):
     """Типы секций дампа."""
-    PRE_DATA = "SECTION_PRE_DATA"
-    DATA = "SECTION_DATA"
-    POST_DATA = "SECTION_POST_DATA"
-    NONE = "SECTION_NONE"
+
+    PRE_DATA = 'SECTION_PRE_DATA'
+    DATA = 'SECTION_DATA'
+    POST_DATA = 'SECTION_POST_DATA'
+    NONE = 'SECTION_NONE'
 
 
 @dataclass(frozen=True)
 class Header:
     """Информация заголовка файла дампа PostgreSQL."""
+
     magic: bytes
     version: Version
     database_name: str
@@ -92,6 +103,7 @@ class Header:
 @dataclass(frozen=True)
 class TocEntry:
     """Запись оглавления (Table of Contents)."""
+
     dump_id: DumpId
     section: SectionType
     had_dumper: bool
@@ -115,6 +127,7 @@ class TocEntry:
 @dataclass(frozen=True)
 class Dump:
     """Полная структура файла дампа."""
+
     header: Header
     toc_entries: list[TocEntry]
 
@@ -123,14 +136,14 @@ class Dump:
         Получить все записи данных таблиц.
         :return: итератор записей с данными таблиц
         """
-        return (entry for entry in self.toc_entries if entry.desc == "TABLE DATA")
+        return (entry for entry in self.toc_entries if entry.desc == 'TABLE DATA')
 
     def get_comment_entries(self) -> Iterator[TocEntry]:
         """
         Получить все записи комментариев.
         :return: итератор записей комментариев
         """
-        return (entry for entry in self.toc_entries if entry.desc == "COMMENT")
+        return (entry for entry in self.toc_entries if entry.desc == 'COMMENT')
 
     def get_entry_by_id(self, dump_id: DumpId) -> Optional[TocEntry]:
         """
@@ -179,8 +192,7 @@ class PgStageParser(DataParser):
             lines = data.decode('utf-8').splitlines()
             processed_lines = [self.parser(line=line) for line in lines]
             return '\n'.join(processed_lines).encode(self.encoding)
-        except UnicodeDecodeError as e:
-            logger.warning(f"Failed to decode data as {self.encoding}: {e}")
+        except UnicodeDecodeError as error:
             return data
 
 
@@ -238,7 +250,7 @@ class DumpIO:
         """
         data = stream.read(1)
         if not data:
-            raise PgDumpError("Unexpected EOF while reading byte")
+            raise PgDumpError('Unexpected EOF while reading byte')
         return struct.unpack('B', data)[0]
 
     def read_int(self, stream: BinaryIO) -> int:
@@ -265,16 +277,16 @@ class DumpIO:
         """
         length = self.read_int(stream)
         if length <= 0:
-            return ""
+            return ''
 
         data = stream.read(length)
         if len(data) != length:
-            raise PgDumpError(f"Expected {length} bytes, got {len(data)}")
+            raise PgDumpError(f'Expected {length} bytes, got {len(data)}')
 
         try:
             return data.decode('utf-8')
-        except UnicodeDecodeError as e:
-            raise PgDumpError(f"Invalid UTF-8 string: {e}")
+        except UnicodeDecodeError as error:
+            raise PgDumpError(f'Invalid UTF-8 string: {error}') from error
 
     def read_offset(self, stream: BinaryIO) -> Offset:
         """
@@ -324,13 +336,9 @@ class HeaderParser:
         """
         magic = stream.read(5)
         if magic != Constants.MAGIC_HEADER:
-            raise PgDumpError(f"Invalid magic header: {magic!r}")
+            raise PgDumpError(f'Invalid magic header: {magic!r}')
 
-        version = (
-            self.dio.read_byte(stream),
-            self.dio.read_byte(stream),
-            self.dio.read_byte(stream)
-        )
+        version = (self.dio.read_byte(stream), self.dio.read_byte(stream), self.dio.read_byte(stream))
 
         self._validate_version(version)
 
@@ -341,7 +349,7 @@ class HeaderParser:
 
         format_byte = self.dio.read_byte(stream)
         if format_byte != Constants.CUSTOM_FORMAT:
-            raise PgDumpError(f"Unsupported format: {format_byte}")
+            raise PgDumpError(f'Unsupported format: {format_byte}')
 
         compression_method = self._parse_compression(stream, version)
         create_date = self._parse_date(stream)
@@ -359,7 +367,7 @@ class HeaderParser:
             compression_method=compression_method,
             create_date=create_date,
             int_size=int_size,
-            offset_size=offset_size
+            offset_size=offset_size,
         )
 
     def _validate_version(self, version: Version) -> None:
@@ -369,7 +377,7 @@ class HeaderParser:
         """
         if version < PostgreSQLVersions.V1_12 or version > PostgreSQLVersions.V1_16:
             version_str = '.'.join(map(str, version))
-            raise PgDumpError(f"Unsupported version: {version_str}")
+            raise PgDumpError(f'Unsupported version: {version_str}')
 
     def _parse_compression(self, stream: BinaryIO, version: Version) -> CompressionMethod:
         """
@@ -388,7 +396,7 @@ class HeaderParser:
             }
             compression_method = compression_map.get(compression_byte)
             if compression_method is None:
-                raise PgDumpError(f"Unknown compression method: {compression_byte}")
+                raise PgDumpError(f'Unknown compression method: {compression_byte}')
         else:
             compression = self.dio.read_int(stream)
             if compression == -1:
@@ -398,7 +406,7 @@ class HeaderParser:
             elif 1 <= compression <= 9:
                 compression_method = CompressionMethod.GZIP
             else:
-                raise PgDumpError(f"Invalid compression level: {compression}")
+                raise PgDumpError(f'Invalid compression level: {compression}')
 
         return compression_method
 
@@ -417,16 +425,9 @@ class HeaderParser:
         _isdst = self.dio.read_int(stream)
 
         try:
-            return datetime.datetime(
-                year=year + 1900,
-                month=month + 1,
-                day=day,
-                hour=hour,
-                minute=minute,
-                second=sec
-            )
-        except ValueError as e:
-            raise PgDumpError(f"Invalid creation date: {e}")
+            return datetime.datetime(year=year + 1900, month=month + 1, day=day, hour=hour, minute=minute, second=sec)
+        except ValueError as error:
+            raise PgDumpError(f'Invalid creation date: {error}') from error
 
 
 class TocParser:
@@ -503,7 +504,7 @@ class TocParser:
             with_oids=with_oids or None,
             table_oid=table_oid or None,
             oid=oid or None,
-            dependencies=dependencies
+            dependencies=dependencies,
         )
 
     def _parse_section(self, section_idx: int) -> SectionType:
@@ -534,12 +535,48 @@ class TocParser:
             try:
                 dependencies.append(int(dep_str))
             except ValueError:
-                logger.warning(f"Invalid dependency ID: {dep_str}")
+                pass
         return dependencies
 
 
+class StreamingLineBuffer:
+    """Буфер для потоковой обработки строк с сохранением целостности."""
+
+    def __init__(self):
+        self._buffer = b''
+        self._processed_size = 0
+
+    def add_chunk(self, chunk: bytes) -> bytes:
+        """
+        Добавляет чанк данных и возвращает завершенные строки для обработки.
+        :param chunk: новый чанк данных
+        :return: завершенные строки для обработки
+        """
+        self._buffer += chunk
+
+        last_newline = self._buffer.rfind(b'\n')
+        if last_newline == -1:
+            return b''
+
+        complete_lines = self._buffer[: last_newline + 1]
+        self._buffer = self._buffer[last_newline + 1 :]
+
+        return complete_lines
+
+    def get_remaining(self) -> bytes:
+        """
+        Возвращает оставшиеся данные в буфере.
+        :return: незавершенные данные
+        """
+        return self._buffer
+
+    def clear(self):
+        """Очищает буфер."""
+        self._buffer = b''
+
+
 class DataBlockProcessor:
-    """Обработчик блоков данных с поддержкой сжатия."""
+    """Обработчик блоков данных с поддержкой сжатия и потоковой обработки."""
 
     def __init__(self, dio: DumpIO, processor: DataParser):
         """
@@ -551,11 +588,7 @@ class DataBlockProcessor:
         self.processor = processor
 
     def process_block(
-        self,
-        input_stream: BinaryIO,
-        output_stream: BinaryIO,
-        dump_id: DumpId,
-        compression: CompressionMethod
+        self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId, compression: CompressionMethod
     ) -> None:
         """
         Обработка одного блока данных.
@@ -569,74 +602,261 @@ class DataBlockProcessor:
         else:
             self._process_uncompressed_block(input_stream, output_stream, dump_id)
 
-    def _process_compressed_block(
-        self,
-        input_stream: BinaryIO,
-        output_stream: BinaryIO,
-        dump_id: DumpId
-    ) -> None:
+    def _process_compressed_block(self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId) -> None:
         """
-        Обработка сжатого блока данных ZLIB.
+        Потоковая обработка сжатого блока данных ZLIB без загрузки в память.
         :param input_stream: входной поток
         :param output_stream: выходной поток
         :param dump_id: ID записи дампа
         """
-        decompressed_data = io.BytesIO()
+        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix='pg_dump_decomp_')
+        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_proc_')
+
+        try:
+            self._stream_decompress(input_stream, decompressed_fd)
+            self._stream_process_lines(decompressed_path, processed_fd)
+            self._stream_compress_and_write(processed_path, output_stream, dump_id)
+
+        finally:
+            for fd, path in [(decompressed_fd, decompressed_path), (processed_fd, processed_path)]:
+                with suppress(Exception):
+                    if fd is not None:
+                        os.close(fd)
+
+                    if path and os.path.exists(path):
+                        os.unlink(path)
+
+    def _stream_decompress(self, input_stream: BinaryIO, output_fd: int) -> None:
+        """
+        Потоковая декомпрессия данных.
+        :param input_stream: входной поток
+        :param output_fd: файловый дескриптор для записи
+        """
         decompressor = zlib.decompressobj()
         remaining_chunk = b''
 
-        while True:
-            chunk_size = self.dio.read_int(input_stream)
-            if chunk_size == 0:
-                break
+        with os.fdopen(output_fd, 'wb') as output_file:
+            while True:
+                try:
+                    chunk_size = self.dio.read_int(input_stream)
+                except Exception as error:
+                    raise PgDumpError(f'Error reading chunk size: {error}')
 
-            chunk_data = input_stream.read(chunk_size)
-            if len(chunk_data) != chunk_size:
-                raise PgDumpError(f"Expected {chunk_size} bytes, got {len(chunk_data)}")
+                if chunk_size == 0:
+                    break
 
-            remaining_chunk += chunk_data
+                if chunk_size > Constants.MAX_CHUNK_SIZE:
+                    raise PgDumpError(f'Chunk size too large: {chunk_size}')
+
+                chunk_data = input_stream.read(chunk_size)
+                if len(chunk_data) != chunk_size:
+                    raise PgDumpError(f'Expected {chunk_size} bytes, got {len(chunk_data)}')
+
+                remaining_chunk += chunk_data
+
+                try:
+                    decompressed_chunk = decompressor.decompress(remaining_chunk)
+                    if decompressed_chunk:
+                        output_file.write(decompressed_chunk)
+
+                    remaining_chunk = decompressor.unconsumed_tail
+
+                except zlib.error as error:
+                    raise PgDumpError(f'Decompression error: {error}')
+
+                if chunk_size < Constants.ZLIB_CHUNK_SIZE:
+                    break
+
             try:
-                decompressed_chunk = decompressor.decompress(remaining_chunk)
-                decompressed_data.write(decompressed_chunk)
-                remaining_chunk = decompressor.unconsumed_tail
-            except zlib.error as e:
-                raise PgDumpError(f"Decompression error: {e}")
+                final_data = decompressor.flush()
+                if final_data:
+                    output_file.write(final_data)
+            except zlib.error as error:
+                raise PgDumpError(f'Final decompression error: {error}')
 
-            if chunk_size < Constants.ZLIB_CHUNK_SIZE:
-                break
-
-        try:
-            final_data = decompressor.flush()
-            decompressed_data.write(final_data)
-        except zlib.error as e:
-            raise PgDumpError(f"Final decompression error: {e}")
-
-        original_data = decompressed_data.getvalue()
-        processed_data = self.processor.parse(original_data)
-
-        compressed_data = zlib.compress(processed_data)
-        self._write_data_block(output_stream, dump_id, compressed_data)
-
-    def _process_uncompressed_block(
-        self,
-        input_stream: BinaryIO,
-        output_stream: BinaryIO,
-        dump_id: DumpId
-    ) -> None:
+    def _stream_process_lines(self, input_path: str, output_fd: int) -> None:
         """
-        Обработка несжатого блока данных.
+        Потоковая обработка данных с сохранением целостности строк.
+        :param input_path: путь к файлу с данными для обработки
+        :param output_fd: файловый дескриптор для записи результата
+        """
+        line_buffer = StreamingLineBuffer()
+
+        with open(input_path, 'rb') as input_file:
+            with os.fdopen(output_fd, 'wb') as output_file:
+                while True:
+                    chunk = input_file.read(Constants.PROCESSING_BUFFER_SIZE)
+                    if not chunk:
+                        remaining = line_buffer.get_remaining()
+                        if remaining:
+                            processed_data = self._process_data_chunk(remaining)
+                            if processed_data:
+                                output_file.write(processed_data)
+                        break
+
+                    complete_lines = line_buffer.add_chunk(chunk)
+                    if complete_lines:
+                        processed_data = self._process_data_chunk(complete_lines)
+                        if processed_data:
+                            output_file.write(processed_data)
+
+    def _process_data_chunk(self, data: bytes) -> bytes:
+        """
+        Обрабатывает чанк данных через процессор.
+        :param data: данные для обработки
+        :return: обработанные данные
+        """
+        try:
+            processed_data = self.processor.parse(data)
+            if isinstance(processed_data, str):
+                return processed_data.encode('utf-8')
+            return processed_data
+        except Exception as error:
+            raise PgDumpError(f'Processing error: {error}')
+
+    def _stream_compress_and_write(self, input_path: str, output_stream: BinaryIO, dump_id: DumpId) -> None:
+        """
+        Потоковая компрессия и запись результата.
+        :param input_path: путь к файлу с обработанными данными
+        :param output_stream: выходной поток
+        :param dump_id: ID записи дампа
+        """
+        compressor = zlib.compressobj(level=Constants.COMPRESSION_LEVEL)
+        compressed_chunks = []
+        total_compressed_size = 0
+
+        with open(input_path, 'rb') as input_file:
+            while True:
+                chunk = input_file.read(Constants.COMPRESSION_BUFFER_SIZE)
+                if not chunk:
+                    break
+
+                compressed_chunk = compressor.compress(chunk)
+                if compressed_chunk:
+                    compressed_chunks.append(compressed_chunk)
+                    total_compressed_size += len(compressed_chunk)
+
+        final_compressed = compressor.flush()
+        if final_compressed:
+            compressed_chunks.append(final_compressed)
+            total_compressed_size += len(final_compressed)
+
+        if self._should_stream_write(total_compressed_size):
+            self._write_data_block_streaming(output_stream, dump_id, compressed_chunks)
+        else:
+            compressed_data = b''.join(compressed_chunks)
+            self._write_data_block(output_stream, dump_id, compressed_data)
+
+    def _should_stream_write(self, size: int) -> bool:
+        """
+        Определяет, нужно ли использовать потоковую запись.
+        :param size: размер данных
+        :return: True если нужна потоковая запись
+        """
+        return size > Constants.STREAM_WRITE_THRESHOLD
+
+    def _write_data_block_streaming(self, output_stream: BinaryIO, dump_id: DumpId, chunks: list) -> None:
+        """
+        Потоковая запись блока данных.
+        :param output_stream: выходной поток
+        :param dump_id: ID записи дампа
+        :param chunks: список чанков для записи
+        """
+        total_size = sum(len(chunk) for chunk in chunks)
+        output_stream.write(BlockType.DATA)
+        output_stream.write(self.dio.write_int(dump_id))
+        output_stream.write(self.dio.write_int(total_size))
+
+        for chunk in chunks:
+            output_stream.write(chunk)
+
+        output_stream.flush()
+
+    def _process_uncompressed_block(self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId) -> None:
+        """
+        Обработка несжатого блока данных с потоковой обработкой.
         :param input_stream: входной поток
         :param output_stream: выходной поток
         :param dump_id: ID записи дампа
         """
         size = self.dio.read_int(input_stream)
-        data = input_stream.read(size)
 
-        if len(data) != size:
-            raise PgDumpError(f"Expected {size} bytes, got {len(data)}")
+        if size > Constants.STREAM_WRITE_THRESHOLD:
+            self._process_uncompressed_streaming(input_stream, output_stream, dump_id, size)
+        else:
+            data = input_stream.read(size)
+            if len(data) != size:
+                raise PgDumpError(f'Expected {size} bytes, got {len(data)}')
 
-        processed_data = self.processor.parse(data)
-        self._write_data_block(output_stream, dump_id, processed_data)
+            processed_data = self.processor.parse(data)
+            if isinstance(processed_data, str):
+                processed_data = processed_data.encode('utf-8')
+
+            self._write_data_block(output_stream, dump_id, processed_data)
+
+    def _process_uncompressed_streaming(
+        self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId, total_size: int
+    ) -> None:
+        """
+        Потоковая обработка больших несжатых блоков.
+        :param input_stream: входной поток
+        :param output_stream: выходной поток
+        :param dump_id: ID записи дампа
+        :param total_size: общий размер блока
+        """
+        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_uncompressed_')
+
+        try:
+            with os.fdopen(processed_fd, 'wb') as processed_file:
+                processed_fd = None
+
+                line_buffer = StreamingLineBuffer()
+                remaining_bytes = total_size
+
+                while remaining_bytes > 0:
+                    chunk_size = min(Constants.PROCESSING_BUFFER_SIZE, remaining_bytes)
+                    chunk = input_stream.read(chunk_size)
+
+                    if len(chunk) != chunk_size:
+                        raise PgDumpError(f'Expected {chunk_size} bytes, got {len(chunk)}')
+
+                    remaining_bytes -= len(chunk)
+
+                    complete_lines = line_buffer.add_chunk(chunk)
+                    if complete_lines:
+                        processed_data = self._process_data_chunk(complete_lines)
+                        if processed_data:
+                            processed_file.write(processed_data)
+
+                remaining = line_buffer.get_remaining()
+                if remaining:
+                    processed_data = self._process_data_chunk(remaining)
+                    if processed_data:
+                        processed_file.write(processed_data)
+
+                processed_file.flush()
+
+            file_size = os.path.getsize(processed_path)
+            output_stream.write(BlockType.DATA)
+            output_stream.write(self.dio.write_int(dump_id))
+            output_stream.write(self.dio.write_int(file_size))
+
+            with open(processed_path, 'rb') as processed_file:
+                while True:
+                    chunk = processed_file.read(Constants.COMPRESSION_BUFFER_SIZE)
+                    if not chunk:
+                        break
+                    output_stream.write(chunk)
+
+            output_stream.flush()
+
+        finally:
+            with suppress(Exception):
+                if processed_fd is not None:
+                    os.close(processed_fd)
+
+                if processed_path and os.path.exists(processed_path):
+                    os.unlink(processed_path)
 
     def _write_data_block(self, output_stream: BinaryIO, dump_id: DumpId, data: bytes) -> None:
         """
@@ -653,7 +873,7 @@ class DataBlockProcessor:
 
 
 class DumpProcessor:
-    """Главный процессор дампов PostgreSQL."""
+    """Главный процессор дампов PostgreSQL с оптимизированной обработкой."""
 
     def __init__(self, data_parser: DataParser):
         """
@@ -669,12 +889,8 @@ class DumpProcessor:
         :param input_stream: входной поток
         :param output_stream: выходной поток
         """
-        try:
-            dump, combined_stream = self._parse_header_and_toc(input_stream, output_stream)
-            self._process_data_blocks(combined_stream, output_stream, dump)
-        except Exception as e:
-            logger.error(f"Error processing dump: {e}")
-            raise
+        dump, combined_stream = self._parse_header_and_toc(input_stream, output_stream)
+        self._process_data_blocks(combined_stream, output_stream, dump)
 
     def _parse_header_and_toc(self, input_stream: BinaryIO, output_stream: BinaryIO) -> tuple[Dump, StreamCombiner]:
         """
@@ -689,7 +905,7 @@ class DumpProcessor:
         while dump is None:
             chunk = input_stream.read(Constants.DEFAULT_BUFFER_SIZE)
             if not chunk:
-                raise PgDumpError("Unexpected EOF while reading header/TOC")
+                raise PgDumpError('Unexpected EOF while reading header/TOC')
 
             buffer.write(chunk)
             buffer.seek(0)
@@ -709,7 +925,9 @@ class DumpProcessor:
 
         toc_end_pos = buffer.tell()
         buffer.seek(0)
-        output_stream.write(buffer.read(toc_end_pos))
+
+        header_toc_data = buffer.read(toc_end_pos)
+        output_stream.write(header_toc_data)
         output_stream.flush()
 
         remaining_data = buffer.read()
@@ -718,57 +936,63 @@ class DumpProcessor:
         return dump, combined_stream
 
     def _process_data_blocks(
-        self,
-        input_stream: Union[BinaryIO, StreamCombiner],
-        output_stream: BinaryIO,
-        dump: Dump
+        self, input_stream: Union[BinaryIO, StreamCombiner], output_stream: BinaryIO, dump: Dump
     ) -> None:
         """
-        Обработка блоков данных в дампе.
+        Обработка блоков данных в дампе с прогресс-индикатором.
         :param input_stream: входной поток
         :param output_stream: выходной поток
         :param dump: объект дампа
         """
-        dump_comments = {entry.defn for entry in dump.get_comment_entries()}
-        dump_copy_stmts = {entry.dump_id: entry.copy_stmt for entry in dump.get_table_data_entries()}
-        dump_ids = {entry.dump_id for entry in dump.get_table_data_entries()}
+        dump_comments = {entry.defn for entry in dump.get_comment_entries() if entry.defn}
+        for comment in dump_comments:
+            with suppress(Exception):
+                self.data_parser.parse(comment)
+
+        table_data_entries = list(dump.get_table_data_entries())
+        dump_copy_stmts = {entry.dump_id: entry.copy_stmt for entry in table_data_entries if entry.copy_stmt}
+        dump_ids = {entry.dump_id for entry in table_data_entries}
+
         processor = DataBlockProcessor(self.dio, self.data_parser)
 
-        for comment in dump_comments:
-            self.data_parser.parse(comment)
-
         while True:
-            block_type = input_stream.read(1)
-            if not block_type:
-                break
-
-            if block_type == BlockType.DATA:
-                dump_id = self.dio.read_int(input_stream)
-
-                if dump_id in dump_ids:
-                    self.data_parser.parse(dump_copy_stmts[dump_id])
-                    processor.process_block(
-                        input_stream,
-                        output_stream,
-                        dump_id,
-                        dump.header.compression_method
-                    )
-                else:
-                    self._pass_through_block(input_stream, output_stream, block_type, dump_id)
-            else:
-                output_stream.write(block_type)
-                if block_type == BlockType.END:
+            try:
+                block_type = input_stream.read(1)
+                if not block_type:
                     break
 
+                if block_type == BlockType.DATA:
+                    dump_id = self.dio.read_int(input_stream)
+
+                    if dump_id in dump_ids:
+                        copy_stmt = dump_copy_stmts.get(dump_id)
+                        if copy_stmt:
+                            with suppress(Exception):
+                                self.data_parser.parse(copy_stmt)
+
+                        try:
+                            processor.process_block(
+                                input_stream, output_stream, dump_id, dump.header.compression_method
+                            )
+                        except Exception as error:
+                            raise PgDumpError(f'Error processing data block {dump_id}: {error}') from error
+                    else:
+                        self._pass_through_block(input_stream, output_stream, block_type, dump_id)
+
+                elif block_type == BlockType.END:
+                    output_stream.write(block_type)
+                    break
+                else:
+                    output_stream.write(block_type)
+
+            except Exception as error:
+                raise PgDumpError(f'Error reading block: {error}') from error
+
     def _pass_through_block(
-        self,
-        input_stream: BinaryIO,
-        output_stream: BinaryIO,
-        block_type: bytes,
-        dump_id: DumpId
+        self, input_stream: BinaryIO, output_stream: BinaryIO, block_type: bytes, dump_id: DumpId
     ) -> None:
         """
-        Передача блока без обработки.
+        Передача блока без обработки с оптимизацией для больших блоков.
         :param input_stream: входной поток
         :param output_stream: выходной поток
         :param block_type: тип блока
@@ -785,8 +1009,24 @@ class DumpProcessor:
             chunk_size = min(remaining, Constants.DEFAULT_BUFFER_SIZE)
             chunk = input_stream.read(chunk_size)
             if not chunk:
-                break
+                raise PgDumpError(f'Unexpected EOF while copying block data, {remaining} bytes remaining')
+
             output_stream.write(chunk)
             remaining -= len(chunk)
 
         output_stream.flush()
+
+
+class CustomObfuscator(Obfuscator):
+    """Главный класс для работы с обфускатором."""
+
+    def run(self, *, stdin=None) -> None:
+        """
+        Метод для запуска обфускации.
+        :param stdin: поток, с которого приходит информация в виде бинарных данных
+        """
+        if not stdin:
+            stdin = sys.stdin
+
+        dump_processor = DumpProcessor(data_parser=PgStageParser(parser=self._parse_line))
+        return dump_processor.process_stream(stdin.buffer, sys.stdout.buffer)
