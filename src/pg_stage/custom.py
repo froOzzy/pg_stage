@@ -189,8 +189,8 @@ class PgStageParser(DataParser):
             return self.parser(line=data)
 
         try:
-            lines = data.decode('utf-8').splitlines()
-            processed_lines = [self.parser(line=line) for line in lines]
+            lines = data.decode('utf-8').split('\n')
+            processed_lines = [self.parser(line=line) if line else line for line in lines]
             return '\n'.join(processed_lines).encode(self.encoding)
         except UnicodeDecodeError as error:
             return data
@@ -559,7 +559,7 @@ class StreamingLineBuffer:
             return b''
 
         complete_lines = self._buffer[: last_newline + 1]
-        self._buffer = self._buffer[last_newline + 1 :]
+        self._buffer = self._buffer[last_newline + 1:]
 
         return complete_lines
 
@@ -609,22 +609,27 @@ class DataBlockProcessor:
         :param output_stream: выходной поток
         :param dump_id: ID записи дампа
         """
-        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix='pg_dump_decomp_')
-        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_proc_')
+        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix='pg_dump_decomp_', dir='/var/tmp/')
+        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_proc_', dir='/var/tmp/')
 
         try:
             self._stream_decompress(input_stream, decompressed_fd)
             self._stream_process_lines(decompressed_path, processed_fd)
             self._stream_compress_and_write(processed_path, output_stream, dump_id)
-
         finally:
-            for fd, path in [(decompressed_fd, decompressed_path), (processed_fd, processed_path)]:
-                with suppress(Exception):
-                    if fd is not None:
+            for fd in [decompressed_fd, processed_fd]:
+                if fd is not None:
+                    with suppress(Exception):
                         os.close(fd)
 
-                    if path and os.path.exists(path):
-                        os.unlink(path)
+            for path in [decompressed_path, processed_path]:
+                if path and os.path.exists(path):
+                    for attempt in range(3):
+                        try:
+                            os.unlink(path)
+                            break
+                        except (OSError, PermissionError) as e:
+                            time.sleep(0.1)
 
     def _stream_decompress(self, input_stream: BinaryIO, output_fd: int) -> None:
         """
@@ -1028,5 +1033,8 @@ class CustomObfuscator(Obfuscator):
         if not stdin:
             stdin = sys.stdin
 
+        if not isinstance(stdin, io.BufferedReader):
+            stdin = stdin.buffer
+
         dump_processor = DumpProcessor(data_parser=PgStageParser(parser=self._parse_line))
-        return dump_processor.process_stream(stdin.buffer, sys.stdout.buffer)
+        return dump_processor.process_stream(stdin, sys.stdout.buffer)
