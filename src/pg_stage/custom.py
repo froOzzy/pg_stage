@@ -57,6 +57,7 @@ class Constants:
     COMPRESSION_LEVEL = 6
     STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
     LINE_BUFFER_SIZE = 1024 * 1024
+    DEFAULT_TMP_DIR = '/var/tmp/'
 
 
 class PgDumpError(Exception):
@@ -629,8 +630,8 @@ class DataBlockProcessor:
         :param output_stream: выходной поток
         :param dump_id: ID записи дампа
         """
-        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix='pg_dump_decomp_', dir='/var/tmp/')
-        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_proc_', dir='/var/tmp/')
+        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix='pg_dump_decomp_', dir=Constants.DEFAULT_TMP_DIR)
+        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_proc_', dir=Constants.DEFAULT_TMP_DIR)
 
         try:
             self._stream_decompress(input_stream, decompressed_fd)
@@ -836,7 +837,7 @@ class DataBlockProcessor:
         :param dump_id: ID записи дампа
         :param total_size: общий размер блока
         """
-        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_uncompressed_')
+        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_uncompressed_', dir=Constants.DEFAULT_TMP_DIR)
 
         try:
             with os.fdopen(processed_fd, 'wb') as processed_file:
