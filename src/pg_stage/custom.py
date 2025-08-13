@@ -1,9 +1,11 @@
 import datetime
+import glob
 import io
 import os
 import struct
 import sys
 import tempfile
+import time
 import zlib
 from abc import ABCMeta, abstractmethod
 from contextlib import suppress
@@ -56,6 +58,8 @@ class Constants:
     COMPRESSION_LEVEL = 6
     STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
     LINE_BUFFER_SIZE = 1024 * 1024
+    DEFAULT_TMP_DIR = os.getcwd()
+    TMP_FILE_PREFIX = 'pg_dump_'
 
 
 class PgDumpError(Exception):
@@ -185,12 +189,22 @@ class PgStageParser(DataParser):
         :param data: исходные данные (строка или байты)
         :return: обработанные данные
         """
+        if not data:
+            return data
+
         if isinstance(data, str):
             return self.parser(line=data)
 
         try:
-            lines = data.decode('utf-8').splitlines()
-            processed_lines = [self.parser(line=line) for line in lines]
+            lines = data.decode('utf-8').split('\n')
+            processed_lines = []
+            for line in lines:
+                if line:
+                    line = self.parser(line=line)
+
+                if isinstance(line, str):
+                    processed_lines.append(line)
+
             return '\n'.join(processed_lines).encode(self.encoding)
         except UnicodeDecodeError as error:
             return data
@@ -250,7 +264,8 @@ class DumpIO:
         """
         data = stream.read(1)
         if not data:
-            raise PgDumpError('Unexpected EOF while reading byte')
+            message = 'Unexpected EOF while reading byte'
+            raise PgDumpError(message)
         return struct.unpack('B', data)[0]
 
     def read_int(self, stream: BinaryIO) -> int:
@@ -281,12 +296,14 @@ class DumpIO:
 
         data = stream.read(length)
         if len(data) != length:
-            raise PgDumpError(f'Expected {length} bytes, got {len(data)}')
+            message = f'Expected {length} bytes, got {len(data)}'
+            raise PgDumpError(message)
 
         try:
             return data.decode('utf-8')
         except UnicodeDecodeError as error:
-            raise PgDumpError(f'Invalid UTF-8 string: {error}') from error
+            message = f'Invalid UTF-8 string: {error}'
+            raise PgDumpError(message) from error
 
     def read_offset(self, stream: BinaryIO) -> Offset:
         """
@@ -336,7 +353,8 @@ class HeaderParser:
         """
         magic = stream.read(5)
         if magic != Constants.MAGIC_HEADER:
-            raise PgDumpError(f'Invalid magic header: {magic!r}')
+            message = f'Invalid magic header: {magic!r}'
+            raise PgDumpError(message)
 
         version = (self.dio.read_byte(stream), self.dio.read_byte(stream), self.dio.read_byte(stream))
 
@@ -349,7 +367,8 @@ class HeaderParser:
 
         format_byte = self.dio.read_byte(stream)
         if format_byte != Constants.CUSTOM_FORMAT:
-            raise PgDumpError(f'Unsupported format: {format_byte}')
+            message = f'Unsupported format: {format_byte}'
+            raise PgDumpError(message)
 
         compression_method = self._parse_compression(stream, version)
         create_date = self._parse_date(stream)
@@ -377,7 +396,8 @@ class HeaderParser:
         """
         if version < PostgreSQLVersions.V1_12 or version > PostgreSQLVersions.V1_16:
             version_str = '.'.join(map(str, version))
-            raise PgDumpError(f'Unsupported version: {version_str}')
+            message = f'Unsupported version: {version_str}'
+            raise PgDumpError(message)
 
     def _parse_compression(self, stream: BinaryIO, version: Version) -> CompressionMethod:
         """
@@ -396,7 +416,8 @@ class HeaderParser:
             }
             compression_method = compression_map.get(compression_byte)
             if compression_method is None:
-                raise PgDumpError(f'Unknown compression method: {compression_byte}')
+                message = f'Unknown compression method: {compression_byte}'
+                raise PgDumpError(message)
         else:
             compression = self.dio.read_int(stream)
             if compression == -1:
@@ -406,7 +427,8 @@ class HeaderParser:
             elif 1 <= compression <= 9:
                 compression_method = CompressionMethod.GZIP
             else:
-                raise PgDumpError(f'Invalid compression level: {compression}')
+                message = f'Invalid compression level: {compression}'
+                raise PgDumpError(message)
 
         return compression_method
 
@@ -427,7 +449,8 @@ class HeaderParser:
         try:
             return datetime.datetime(year=year + 1900, month=month + 1, day=day, hour=hour, minute=minute, second=sec)
         except ValueError as error:
-            raise PgDumpError(f'Invalid creation date: {error}') from error
+            message = f'Invalid creation date: {error}'
+            raise PgDumpError(message) from error
 
 
 class TocParser:
@@ -609,22 +632,29 @@ class DataBlockProcessor:
         :param output_stream: выходной поток
         :param dump_id: ID записи дампа
         """
-        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix='pg_dump_decomp_')
-        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_proc_')
+        decmop_prefix = f'{Constants.TMP_FILE_PREFIX}decomp_'
+        proc_prefix = f'{Constants.TMP_FILE_PREFIX}proc_'
+        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix=decmop_prefix, dir=Constants.DEFAULT_TMP_DIR)
+        processed_fd, processed_path = tempfile.mkstemp(prefix=proc_prefix, dir=Constants.DEFAULT_TMP_DIR)
 
         try:
             self._stream_decompress(input_stream, decompressed_fd)
             self._stream_process_lines(decompressed_path, processed_fd)
             self._stream_compress_and_write(processed_path, output_stream, dump_id)
-
         finally:
-            for fd, path in [(decompressed_fd, decompressed_path), (processed_fd, processed_path)]:
-                with suppress(Exception):
-                    if fd is not None:
+            for fd in [decompressed_fd, processed_fd]:
+                if fd is not None:
+                    with suppress(Exception):
                         os.close(fd)
 
-                    if path and os.path.exists(path):
-                        os.unlink(path)
+            for path in [decompressed_path, processed_path]:
+                if path and os.path.exists(path):
+                    for _ in range(3):
+                        try:
+                            os.unlink(path)
+                            break
+                        except (OSError, PermissionError) as error:
+                            time.sleep(0.1)
 
     def _stream_decompress(self, input_stream: BinaryIO, output_fd: int) -> None:
         """
@@ -640,17 +670,20 @@ class DataBlockProcessor:
                 try:
                     chunk_size = self.dio.read_int(input_stream)
                 except Exception as error:
-                    raise PgDumpError(f'Error reading chunk size: {error}')
+                    message = f'Error reading chunk size: {error}'
+                    raise PgDumpError(message) from error
 
                 if chunk_size == 0:
                     break
 
                 if chunk_size > Constants.MAX_CHUNK_SIZE:
-                    raise PgDumpError(f'Chunk size too large: {chunk_size}')
+                    message = f'Chunk size too large: {chunk_size}'
+                    raise PgDumpError(message)
 
                 chunk_data = input_stream.read(chunk_size)
                 if len(chunk_data) != chunk_size:
-                    raise PgDumpError(f'Expected {chunk_size} bytes, got {len(chunk_data)}')
+                    message = f'Expected {chunk_size} bytes, got {len(chunk_data)}'
+                    raise PgDumpError(message)
 
                 remaining_chunk += chunk_data
 
@@ -662,7 +695,8 @@ class DataBlockProcessor:
                     remaining_chunk = decompressor.unconsumed_tail
 
                 except zlib.error as error:
-                    raise PgDumpError(f'Decompression error: {error}')
+                    message = f'Decompression error: {error}'
+                    raise PgDumpError(message) from error
 
                 if chunk_size < Constants.ZLIB_CHUNK_SIZE:
                     break
@@ -672,7 +706,8 @@ class DataBlockProcessor:
                 if final_data:
                     output_file.write(final_data)
             except zlib.error as error:
-                raise PgDumpError(f'Final decompression error: {error}')
+                message = f'Final decompression error: {error}'
+                raise PgDumpError(message) from error
 
     def _stream_process_lines(self, input_path: str, output_fd: int) -> None:
         """
@@ -712,7 +747,8 @@ class DataBlockProcessor:
                 return processed_data.encode('utf-8')
             return processed_data
         except Exception as error:
-            raise PgDumpError(f'Processing error: {error}')
+            message = f'Processing error: {error}'
+            raise PgDumpError(message) from error
 
     def _stream_compress_and_write(self, input_path: str, output_stream: BinaryIO, dump_id: DumpId) -> None:
         """
@@ -786,7 +822,8 @@ class DataBlockProcessor:
         else:
             data = input_stream.read(size)
             if len(data) != size:
-                raise PgDumpError(f'Expected {size} bytes, got {len(data)}')
+                message = f'Expected {size} bytes, got {len(data)}'
+                raise PgDumpError(message)
 
             processed_data = self.processor.parse(data)
             if isinstance(processed_data, str):
@@ -804,7 +841,8 @@ class DataBlockProcessor:
         :param dump_id: ID записи дампа
         :param total_size: общий размер блока
         """
-        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_uncompressed_')
+        proc_uncomp_prefix = f'{Constants.TMP_FILE_PREFIX}uncompressed_'
+        processed_fd, processed_path = tempfile.mkstemp(prefix=proc_uncomp_prefix, dir=Constants.DEFAULT_TMP_DIR)
 
         try:
             with os.fdopen(processed_fd, 'wb') as processed_file:
@@ -818,7 +856,8 @@ class DataBlockProcessor:
                     chunk = input_stream.read(chunk_size)
 
                     if len(chunk) != chunk_size:
-                        raise PgDumpError(f'Expected {chunk_size} bytes, got {len(chunk)}')
+                        message = f'Expected {chunk_size} bytes, got {len(chunk)}'
+                        raise PgDumpError(message)
 
                     remaining_bytes -= len(chunk)
 
@@ -851,12 +890,17 @@ class DataBlockProcessor:
             output_stream.flush()
 
         finally:
-            with suppress(Exception):
-                if processed_fd is not None:
-                    os.close(processed_fd)
+            for _ in range(3):
+                try:
+                    if processed_fd is not None:
+                        os.close(processed_fd)
 
-                if processed_path and os.path.exists(processed_path):
-                    os.unlink(processed_path)
+                    if processed_path and os.path.exists(processed_path):
+                        os.unlink(processed_path)
+
+                    break
+                except (OSError, PermissionError) as error:
+                    time.sleep(0.1)
 
     def _write_data_block(self, output_stream: BinaryIO, dump_id: DumpId, data: bytes) -> None:
         """
@@ -905,7 +949,8 @@ class DumpProcessor:
         while dump is None:
             chunk = input_stream.read(Constants.DEFAULT_BUFFER_SIZE)
             if not chunk:
-                raise PgDumpError('Unexpected EOF while reading header/TOC')
+                message = 'Unexpected EOF while reading header/TOC'
+                raise PgDumpError(message)
 
             buffer.write(chunk)
             buffer.seek(0)
@@ -975,7 +1020,8 @@ class DumpProcessor:
                                 input_stream, output_stream, dump_id, dump.header.compression_method
                             )
                         except Exception as error:
-                            raise PgDumpError(f'Error processing data block {dump_id}: {error}') from error
+                            message = f'Error processing data block {dump_id}: {error}'
+                            raise PgDumpError(message) from error
                     else:
                         self._pass_through_block(input_stream, output_stream, block_type, dump_id)
 
@@ -986,7 +1032,8 @@ class DumpProcessor:
                     output_stream.write(block_type)
 
             except Exception as error:
-                raise PgDumpError(f'Error reading block: {error}') from error
+                message = f'Error reading block: {error}'
+                raise PgDumpError(message) from error
 
     def _pass_through_block(
         self, input_stream: BinaryIO, output_stream: BinaryIO, block_type: bytes, dump_id: DumpId
@@ -1009,7 +1056,8 @@ class DumpProcessor:
             chunk_size = min(remaining, Constants.DEFAULT_BUFFER_SIZE)
             chunk = input_stream.read(chunk_size)
             if not chunk:
-                raise PgDumpError(f'Unexpected EOF while copying block data, {remaining} bytes remaining')
+                message = f'Unexpected EOF while copying block data, {remaining} bytes remaining'
+                raise PgDumpError(message)
 
             output_stream.write(chunk)
             remaining -= len(chunk)
@@ -1020,6 +1068,21 @@ class DumpProcessor:
 class CustomObfuscator(Obfuscator):
     """Главный класс для работы с обфускатором."""
 
+    @staticmethod
+    def cleanup_tmp_files(*, prefix: str) -> None:
+        """Удаляет файлы с указанным префиксом"""
+        pattern = f'{prefix}*'
+        files_to_delete = glob.glob(pattern)
+
+        for file_name in files_to_delete:
+            file_path = f'{Constants.DEFAULT_TMP_DIR}/{file_name}'
+            try:
+                if file_path and os.path.exists(file_path):
+                    os.unlink(file_path)
+            except OSError as e:
+                message = f'Error cleaning up file {file_path}: {e}'
+                raise PgDumpError(message) from e
+
     def run(self, *, stdin=None) -> None:
         """
         Метод для запуска обфускации.
@@ -1028,5 +1091,11 @@ class CustomObfuscator(Obfuscator):
         if not stdin:
             stdin = sys.stdin
 
-        dump_processor = DumpProcessor(data_parser=PgStageParser(parser=self._parse_line))
-        return dump_processor.process_stream(stdin.buffer, sys.stdout.buffer)
+        if not isinstance(stdin, io.BufferedReader):
+            stdin = stdin.buffer
+
+        try:
+            dump_processor = DumpProcessor(data_parser=PgStageParser(parser=self._parse_line))
+            return dump_processor.process_stream(stdin, sys.stdout.buffer)
+        finally:
+            self.cleanup_tmp_files(prefix=Constants.TMP_FILE_PREFIX)
