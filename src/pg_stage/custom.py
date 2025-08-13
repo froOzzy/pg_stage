@@ -57,7 +57,7 @@ class Constants:
     COMPRESSION_LEVEL = 6
     STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
     LINE_BUFFER_SIZE = 1024 * 1024
-    DEFAULT_TMP_DIR = '/var/tmp/'
+    DEFAULT_TMP_DIR = os.getcwd()
 
 
 class PgDumpError(Exception):
