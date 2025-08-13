@@ -1,4 +1,5 @@
 import datetime
+import glob
 import io
 import os
 import struct
@@ -58,6 +59,7 @@ class Constants:
     STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
     LINE_BUFFER_SIZE = 1024 * 1024
     DEFAULT_TMP_DIR = os.getcwd()
+    TMP_FILE_PREFIX = 'pg_dump_'
 
 
 class PgDumpError(Exception):
@@ -630,8 +632,10 @@ class DataBlockProcessor:
         :param output_stream: выходной поток
         :param dump_id: ID записи дампа
         """
-        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix='pg_dump_decomp_', dir=Constants.DEFAULT_TMP_DIR)
-        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_proc_', dir=Constants.DEFAULT_TMP_DIR)
+        decmop_prefix = f'{Constants.TMP_FILE_PREFIX}decomp_'
+        proc_prefix = f'{Constants.TMP_FILE_PREFIX}proc_'
+        decompressed_fd, decompressed_path = tempfile.mkstemp(prefix=decmop_prefix, dir=Constants.DEFAULT_TMP_DIR)
+        processed_fd, processed_path = tempfile.mkstemp(prefix=proc_prefix, dir=Constants.DEFAULT_TMP_DIR)
 
         try:
             self._stream_decompress(input_stream, decompressed_fd)
@@ -837,7 +841,8 @@ class DataBlockProcessor:
         :param dump_id: ID записи дампа
         :param total_size: общий размер блока
         """
-        processed_fd, processed_path = tempfile.mkstemp(prefix='pg_dump_uncompressed_', dir=Constants.DEFAULT_TMP_DIR)
+        proc_uncomp_prefix = f'{Constants.TMP_FILE_PREFIX}uncompressed_'
+        processed_fd, processed_path = tempfile.mkstemp(prefix=proc_uncomp_prefix, dir=Constants.DEFAULT_TMP_DIR)
 
         try:
             with os.fdopen(processed_fd, 'wb') as processed_file:
@@ -1063,6 +1068,21 @@ class DumpProcessor:
 class CustomObfuscator(Obfuscator):
     """Главный класс для работы с обфускатором."""
 
+    @staticmethod
+    def cleanup_tmp_files(*, prefix: str) -> None:
+        """Удаляет файлы с указанным префиксом"""
+        pattern = f'{prefix}*'
+        files_to_delete = glob.glob(pattern)
+
+        for file_name in files_to_delete:
+            file_path = f'{Constants.DEFAULT_TMP_DIR}/{file_name}'
+            try:
+                if file_path and os.path.exists(file_path):
+                    os.unlink(file_path)
+            except OSError as e:
+                message = f'Error cleaning up file {file_path}: {e}'
+                raise PgDumpError(message) from e
+
     def run(self, *, stdin=None) -> None:
         """
         Метод для запуска обфускации.
@@ -1074,5 +1094,8 @@ class CustomObfuscator(Obfuscator):
         if not isinstance(stdin, io.BufferedReader):
             stdin = stdin.buffer
 
-        dump_processor = DumpProcessor(data_parser=PgStageParser(parser=self._parse_line))
-        return dump_processor.process_stream(stdin, sys.stdout.buffer)
+        try:
+            dump_processor = DumpProcessor(data_parser=PgStageParser(parser=self._parse_line))
+            return dump_processor.process_stream(stdin, sys.stdout.buffer)
+        finally:
+            self.cleanup_tmp_files(prefix=Constants.TMP_FILE_PREFIX)
