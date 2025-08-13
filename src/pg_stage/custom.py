@@ -4,6 +4,7 @@ import os
 import struct
 import sys
 import tempfile
+import time
 import zlib
 from abc import ABCMeta, abstractmethod
 from contextlib import suppress
@@ -53,7 +54,7 @@ class Constants:
     MAX_CHUNK_SIZE = 50 * 1024 * 1024
     PROCESSING_BUFFER_SIZE = 64 * 1024
     COMPRESSION_BUFFER_SIZE = 32 * 1024
-    COMPRESSION_LEVEL = 5
+    COMPRESSION_LEVEL = 6
     STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
     LINE_BUFFER_SIZE = 1024 * 1024
 
@@ -260,7 +261,8 @@ class DumpIO:
         """
         data = stream.read(1)
         if not data:
-            raise PgDumpError('Unexpected EOF while reading byte')
+            message = 'Unexpected EOF while reading byte'
+            raise PgDumpError(message)
         return struct.unpack('B', data)[0]
 
     def read_int(self, stream: BinaryIO) -> int:
@@ -291,12 +293,14 @@ class DumpIO:
 
         data = stream.read(length)
         if len(data) != length:
-            raise PgDumpError(f'Expected {length} bytes, got {len(data)}')
+            message = f'Expected {length} bytes, got {len(data)}'
+            raise PgDumpError(message)
 
         try:
             return data.decode('utf-8')
         except UnicodeDecodeError as error:
-            raise PgDumpError(f'Invalid UTF-8 string: {error}') from error
+            message = f'Invalid UTF-8 string: {error}'
+            raise PgDumpError(message) from error
 
     def read_offset(self, stream: BinaryIO) -> Offset:
         """
@@ -346,7 +350,8 @@ class HeaderParser:
         """
         magic = stream.read(5)
         if magic != Constants.MAGIC_HEADER:
-            raise PgDumpError(f'Invalid magic header: {magic!r}')
+            message = f'Invalid magic header: {magic!r}'
+            raise PgDumpError(message)
 
         version = (self.dio.read_byte(stream), self.dio.read_byte(stream), self.dio.read_byte(stream))
 
@@ -359,7 +364,8 @@ class HeaderParser:
 
         format_byte = self.dio.read_byte(stream)
         if format_byte != Constants.CUSTOM_FORMAT:
-            raise PgDumpError(f'Unsupported format: {format_byte}')
+            message = f'Unsupported format: {format_byte}'
+            raise PgDumpError(message)
 
         compression_method = self._parse_compression(stream, version)
         create_date = self._parse_date(stream)
@@ -387,7 +393,8 @@ class HeaderParser:
         """
         if version < PostgreSQLVersions.V1_12 or version > PostgreSQLVersions.V1_16:
             version_str = '.'.join(map(str, version))
-            raise PgDumpError(f'Unsupported version: {version_str}')
+            message = f'Unsupported version: {version_str}'
+            raise PgDumpError(message)
 
     def _parse_compression(self, stream: BinaryIO, version: Version) -> CompressionMethod:
         """
@@ -406,7 +413,8 @@ class HeaderParser:
             }
             compression_method = compression_map.get(compression_byte)
             if compression_method is None:
-                raise PgDumpError(f'Unknown compression method: {compression_byte}')
+                message = f'Unknown compression method: {compression_byte}'
+                raise PgDumpError(message)
         else:
             compression = self.dio.read_int(stream)
             if compression == -1:
@@ -416,7 +424,8 @@ class HeaderParser:
             elif 1 <= compression <= 9:
                 compression_method = CompressionMethod.GZIP
             else:
-                raise PgDumpError(f'Invalid compression level: {compression}')
+                message = f'Invalid compression level: {compression}'
+                raise PgDumpError(message)
 
         return compression_method
 
@@ -437,7 +446,8 @@ class HeaderParser:
         try:
             return datetime.datetime(year=year + 1900, month=month + 1, day=day, hour=hour, minute=minute, second=sec)
         except ValueError as error:
-            raise PgDumpError(f'Invalid creation date: {error}') from error
+            message = f'Invalid creation date: {error}'
+            raise PgDumpError(message) from error
 
 
 class TocParser:
@@ -569,7 +579,7 @@ class StreamingLineBuffer:
             return b''
 
         complete_lines = self._buffer[: last_newline + 1]
-        self._buffer = self._buffer[last_newline + 1:]
+        self._buffer = self._buffer[last_newline + 1 :]
 
         return complete_lines
 
@@ -634,11 +644,11 @@ class DataBlockProcessor:
 
             for path in [decompressed_path, processed_path]:
                 if path and os.path.exists(path):
-                    for attempt in range(3):
+                    for _ in range(3):
                         try:
                             os.unlink(path)
                             break
-                        except (OSError, PermissionError) as e:
+                        except (OSError, PermissionError) as error:
                             time.sleep(0.1)
 
     def _stream_decompress(self, input_stream: BinaryIO, output_fd: int) -> None:
@@ -655,17 +665,20 @@ class DataBlockProcessor:
                 try:
                     chunk_size = self.dio.read_int(input_stream)
                 except Exception as error:
-                    raise PgDumpError(f'Error reading chunk size: {error}')
+                    message = f'Error reading chunk size: {error}'
+                    raise PgDumpError(message) from error
 
                 if chunk_size == 0:
                     break
 
                 if chunk_size > Constants.MAX_CHUNK_SIZE:
-                    raise PgDumpError(f'Chunk size too large: {chunk_size}')
+                    message = f'Chunk size too large: {chunk_size}'
+                    raise PgDumpError(message)
 
                 chunk_data = input_stream.read(chunk_size)
                 if len(chunk_data) != chunk_size:
-                    raise PgDumpError(f'Expected {chunk_size} bytes, got {len(chunk_data)}')
+                    message = f'Expected {chunk_size} bytes, got {len(chunk_data)}'
+                    raise PgDumpError(message)
 
                 remaining_chunk += chunk_data
 
@@ -677,7 +690,8 @@ class DataBlockProcessor:
                     remaining_chunk = decompressor.unconsumed_tail
 
                 except zlib.error as error:
-                    raise PgDumpError(f'Decompression error: {error}')
+                    message = f'Decompression error: {error}'
+                    raise PgDumpError(message) from error
 
                 if chunk_size < Constants.ZLIB_CHUNK_SIZE:
                     break
@@ -687,7 +701,8 @@ class DataBlockProcessor:
                 if final_data:
                     output_file.write(final_data)
             except zlib.error as error:
-                raise PgDumpError(f'Final decompression error: {error}')
+                message = f'Final decompression error: {error}'
+                raise PgDumpError(message) from error
 
     def _stream_process_lines(self, input_path: str, output_fd: int) -> None:
         """
@@ -727,7 +742,8 @@ class DataBlockProcessor:
                 return processed_data.encode('utf-8')
             return processed_data
         except Exception as error:
-            raise PgDumpError(f'Processing error: {error}')
+            message = f'Processing error: {error}'
+            raise PgDumpError(message) from error
 
     def _stream_compress_and_write(self, input_path: str, output_stream: BinaryIO, dump_id: DumpId) -> None:
         """
@@ -801,7 +817,8 @@ class DataBlockProcessor:
         else:
             data = input_stream.read(size)
             if len(data) != size:
-                raise PgDumpError(f'Expected {size} bytes, got {len(data)}')
+                message = f'Expected {size} bytes, got {len(data)}'
+                raise PgDumpError(message)
 
             processed_data = self.processor.parse(data)
             if isinstance(processed_data, str):
@@ -833,7 +850,8 @@ class DataBlockProcessor:
                     chunk = input_stream.read(chunk_size)
 
                     if len(chunk) != chunk_size:
-                        raise PgDumpError(f'Expected {chunk_size} bytes, got {len(chunk)}')
+                        message = f'Expected {chunk_size} bytes, got {len(chunk)}'
+                        raise PgDumpError(message)
 
                     remaining_bytes -= len(chunk)
 
@@ -866,12 +884,17 @@ class DataBlockProcessor:
             output_stream.flush()
 
         finally:
-            with suppress(Exception):
-                if processed_fd is not None:
-                    os.close(processed_fd)
+            for _ in range(3):
+                try:
+                    if processed_fd is not None:
+                        os.close(processed_fd)
 
-                if processed_path and os.path.exists(processed_path):
-                    os.unlink(processed_path)
+                    if processed_path and os.path.exists(processed_path):
+                        os.unlink(processed_path)
+
+                    break
+                except (OSError, PermissionError) as error:
+                    time.sleep(0.1)
 
     def _write_data_block(self, output_stream: BinaryIO, dump_id: DumpId, data: bytes) -> None:
         """
@@ -920,7 +943,8 @@ class DumpProcessor:
         while dump is None:
             chunk = input_stream.read(Constants.DEFAULT_BUFFER_SIZE)
             if not chunk:
-                raise PgDumpError('Unexpected EOF while reading header/TOC')
+                message = 'Unexpected EOF while reading header/TOC'
+                raise PgDumpError(message)
 
             buffer.write(chunk)
             buffer.seek(0)
@@ -990,7 +1014,8 @@ class DumpProcessor:
                                 input_stream, output_stream, dump_id, dump.header.compression_method
                             )
                         except Exception as error:
-                            raise PgDumpError(f'Error processing data block {dump_id}: {error}') from error
+                            message = f'Error processing data block {dump_id}: {error}'
+                            raise PgDumpError(message) from error
                     else:
                         self._pass_through_block(input_stream, output_stream, block_type, dump_id)
 
@@ -1001,7 +1026,8 @@ class DumpProcessor:
                     output_stream.write(block_type)
 
             except Exception as error:
-                raise PgDumpError(f'Error reading block: {error}') from error
+                message = f'Error reading block: {error}'
+                raise PgDumpError(message) from error
 
     def _pass_through_block(
         self, input_stream: BinaryIO, output_stream: BinaryIO, block_type: bytes, dump_id: DumpId
@@ -1024,7 +1050,8 @@ class DumpProcessor:
             chunk_size = min(remaining, Constants.DEFAULT_BUFFER_SIZE)
             chunk = input_stream.read(chunk_size)
             if not chunk:
-                raise PgDumpError(f'Unexpected EOF while copying block data, {remaining} bytes remaining')
+                message = f'Unexpected EOF while copying block data, {remaining} bytes remaining'
+                raise PgDumpError(message)
 
             output_stream.write(chunk)
             remaining -= len(chunk)
