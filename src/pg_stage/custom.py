@@ -57,7 +57,6 @@ class Constants:
     COMPRESSION_BUFFER_SIZE = 32 * 1024
     COMPRESSION_LEVEL = 6
     STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
-    LINE_BUFFER_SIZE = 1024 * 1024
     DEFAULT_TMP_DIR = os.getcwd()
     TMP_FILE_PREFIX = 'pg_dump_'
 
@@ -758,8 +757,9 @@ class DataBlockProcessor:
         :param dump_id: ID записи дампа
         """
         compressor = zlib.compressobj(level=Constants.COMPRESSION_LEVEL)
-        compressed_chunks = []
-        total_compressed_size = 0
+
+        output_stream.write(BlockType.DATA)
+        output_stream.write(self.dio.write_int(dump_id))
 
         with open(input_path, 'rb') as input_file:
             while True:
@@ -769,42 +769,15 @@ class DataBlockProcessor:
 
                 compressed_chunk = compressor.compress(chunk)
                 if compressed_chunk:
-                    compressed_chunks.append(compressed_chunk)
-                    total_compressed_size += len(compressed_chunk)
+                    output_stream.write(self.dio.write_int(len(compressed_chunk)))
+                    output_stream.write(compressed_chunk)
 
         final_compressed = compressor.flush()
         if final_compressed:
-            compressed_chunks.append(final_compressed)
-            total_compressed_size += len(final_compressed)
+            output_stream.write(self.dio.write_int(len(final_compressed)))
+            output_stream.write(final_compressed)
 
-        if self._should_stream_write(total_compressed_size):
-            self._write_data_block_streaming(output_stream, dump_id, compressed_chunks)
-        else:
-            compressed_data = b''.join(compressed_chunks)
-            self._write_data_block(output_stream, dump_id, compressed_data)
-
-    def _should_stream_write(self, size: int) -> bool:
-        """
-        Определяет, нужно ли использовать потоковую запись.
-        :param size: размер данных
-        :return: True если нужна потоковая запись
-        """
-        return size > Constants.STREAM_WRITE_THRESHOLD
-
-    def _write_data_block_streaming(self, output_stream: BinaryIO, dump_id: DumpId, chunks: list) -> None:
-        """
-        Потоковая запись блока данных.
-        :param output_stream: выходной поток
-        :param dump_id: ID записи дампа
-        :param chunks: список чанков для записи
-        """
-        output_stream.write(BlockType.DATA)
-        output_stream.write(self.dio.write_int(dump_id))
-
-        for chunk in chunks:
-            output_stream.write(self.dio.write_int(len(chunk)))
-            output_stream.write(chunk)
-
+        output_stream.write(self.dio.write_int(0))
         output_stream.flush()
 
     def _process_uncompressed_block(self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId) -> None:
@@ -912,6 +885,7 @@ class DataBlockProcessor:
         output_stream.write(self.dio.write_int(dump_id))
         output_stream.write(self.dio.write_int(len(data)))
         output_stream.write(data)
+        output_stream.write(self.dio.write_int(0))
         output_stream.flush()
 
 
