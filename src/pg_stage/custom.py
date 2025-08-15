@@ -819,7 +819,8 @@ class DataBlockProcessor:
     def _process_uncompressed_streaming(
         self,
         input_stream: Union[BinaryIO, StreamCombiner],
-        output_stream: BinaryIO, dump_id: DumpId,
+        output_stream: BinaryIO,
+        dump_id: DumpId,
         total_size: int,
     ) -> None:
         """
