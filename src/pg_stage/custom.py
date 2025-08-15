@@ -798,12 +798,11 @@ class DataBlockProcessor:
         :param dump_id: ID записи дампа
         :param chunks: список чанков для записи
         """
-        total_size = sum(len(chunk) for chunk in chunks)
         output_stream.write(BlockType.DATA)
         output_stream.write(self.dio.write_int(dump_id))
-        output_stream.write(self.dio.write_int(total_size))
 
         for chunk in chunks:
+            output_stream.write(self.dio.write_int(len(chunk)))
             output_stream.write(chunk)
 
         output_stream.flush()
