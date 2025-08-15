@@ -57,7 +57,6 @@ class Constants:
     COMPRESSION_BUFFER_SIZE = 32 * 1024
     COMPRESSION_LEVEL = 6
     STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
-    LINE_BUFFER_SIZE = 1024 * 1024
     DEFAULT_TMP_DIR = os.getcwd()
     TMP_FILE_PREFIX = 'pg_dump_'
 
@@ -256,7 +255,7 @@ class DumpIO:
         self.int_size = int_size
         self.offset_size = offset_size
 
-    def read_byte(self, stream: BinaryIO) -> int:
+    def read_byte(self, stream: Union[BinaryIO, StreamCombiner]) -> int:
         """
         Чтение одного байта.
         :param stream: поток для чтения
@@ -268,7 +267,7 @@ class DumpIO:
             raise PgDumpError(message)
         return struct.unpack('B', data)[0]
 
-    def read_int(self, stream: BinaryIO) -> int:
+    def read_int(self, stream: Union[BinaryIO, StreamCombiner]) -> int:
         """
         Чтение знакового целого числа с переменным размером.
         :param stream: поток для чтения
@@ -284,7 +283,7 @@ class DumpIO:
 
         return -value if sign else value
 
-    def read_string(self, stream: BinaryIO) -> str:
+    def read_string(self, stream: Union[BinaryIO, StreamCombiner]) -> str:
         """
         Чтение строки UTF-8 с префиксом длины.
         :param stream: поток для чтения
@@ -305,7 +304,7 @@ class DumpIO:
             message = f'Invalid UTF-8 string: {error}'
             raise PgDumpError(message) from error
 
-    def read_offset(self, stream: BinaryIO) -> Offset:
+    def read_offset(self, stream: Union[BinaryIO, StreamCombiner]) -> Offset:
         """
         Чтение значения смещения.
         :param stream: поток для чтения
@@ -611,7 +610,11 @@ class DataBlockProcessor:
         self.processor = processor
 
     def process_block(
-        self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId, compression: CompressionMethod
+        self,
+        input_stream: Union[BinaryIO, StreamCombiner],
+        output_stream: BinaryIO,
+        dump_id: DumpId,
+        compression: CompressionMethod,
     ) -> None:
         """
         Обработка одного блока данных.
@@ -625,7 +628,12 @@ class DataBlockProcessor:
         else:
             self._process_uncompressed_block(input_stream, output_stream, dump_id)
 
-    def _process_compressed_block(self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId) -> None:
+    def _process_compressed_block(
+        self,
+        input_stream: Union[BinaryIO, StreamCombiner],
+        output_stream: BinaryIO,
+        dump_id: DumpId,
+    ) -> None:
         """
         Потоковая обработка сжатого блока данных ZLIB без загрузки в память.
         :param input_stream: входной поток
@@ -656,7 +664,7 @@ class DataBlockProcessor:
                         except (OSError, PermissionError) as error:
                             time.sleep(0.1)
 
-    def _stream_decompress(self, input_stream: BinaryIO, output_fd: int) -> None:
+    def _stream_decompress(self, input_stream: Union[BinaryIO, StreamCombiner], output_fd: int) -> None:
         """
         Потоковая декомпрессия данных.
         :param input_stream: входной поток
@@ -758,8 +766,9 @@ class DataBlockProcessor:
         :param dump_id: ID записи дампа
         """
         compressor = zlib.compressobj(level=Constants.COMPRESSION_LEVEL)
-        compressed_chunks = []
-        total_compressed_size = 0
+
+        output_stream.write(BlockType.DATA)
+        output_stream.write(self.dio.write_int(dump_id))
 
         with open(input_path, 'rb') as input_file:
             while True:
@@ -769,45 +778,22 @@ class DataBlockProcessor:
 
                 compressed_chunk = compressor.compress(chunk)
                 if compressed_chunk:
-                    compressed_chunks.append(compressed_chunk)
-                    total_compressed_size += len(compressed_chunk)
+                    output_stream.write(self.dio.write_int(len(compressed_chunk)))
+                    output_stream.write(compressed_chunk)
 
         final_compressed = compressor.flush()
         if final_compressed:
-            compressed_chunks.append(final_compressed)
-            total_compressed_size += len(final_compressed)
-
-        if self._should_stream_write(total_compressed_size):
-            self._write_data_block_streaming(output_stream, dump_id, compressed_chunks)
-        else:
-            compressed_data = b''.join(compressed_chunks)
-            self._write_data_block(output_stream, dump_id, compressed_data)
-
-    def _should_stream_write(self, size: int) -> bool:
-        """
-        Определяет, нужно ли использовать потоковую запись.
-        :param size: размер данных
-        :return: True если нужна потоковая запись
-        """
-        return size > Constants.STREAM_WRITE_THRESHOLD
-
-    def _write_data_block_streaming(self, output_stream: BinaryIO, dump_id: DumpId, chunks: list) -> None:
-        """
-        Потоковая запись блока данных.
-        :param output_stream: выходной поток
-        :param dump_id: ID записи дампа
-        :param chunks: список чанков для записи
-        """
-        output_stream.write(BlockType.DATA)
-        output_stream.write(self.dio.write_int(dump_id))
-
-        for chunk in chunks:
-            output_stream.write(self.dio.write_int(len(chunk)))
-            output_stream.write(chunk)
+            output_stream.write(self.dio.write_int(len(final_compressed)))
+            output_stream.write(final_compressed)
 
         output_stream.flush()
 
-    def _process_uncompressed_block(self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId) -> None:
+    def _process_uncompressed_block(
+        self,
+        input_stream: Union[BinaryIO, StreamCombiner],
+        output_stream: BinaryIO,
+        dump_id: DumpId,
+    ) -> None:
         """
         Обработка несжатого блока данных с потоковой обработкой.
         :param input_stream: входной поток
@@ -831,7 +817,10 @@ class DataBlockProcessor:
             self._write_data_block(output_stream, dump_id, processed_data)
 
     def _process_uncompressed_streaming(
-        self, input_stream: BinaryIO, output_stream: BinaryIO, dump_id: DumpId, total_size: int
+        self,
+        input_stream: Union[BinaryIO, StreamCombiner],
+        output_stream: BinaryIO, dump_id: DumpId,
+        total_size: int,
     ) -> None:
         """
         Потоковая обработка больших несжатых блоков.
@@ -845,8 +834,6 @@ class DataBlockProcessor:
 
         try:
             with os.fdopen(processed_fd, 'wb') as processed_file:
-                processed_fd = None
-
                 line_buffer = StreamingLineBuffer()
                 remaining_bytes = total_size
 
@@ -980,7 +967,10 @@ class DumpProcessor:
         return dump, combined_stream
 
     def _process_data_blocks(
-        self, input_stream: Union[BinaryIO, StreamCombiner], output_stream: BinaryIO, dump: Dump
+        self,
+        input_stream: Union[BinaryIO, StreamCombiner],
+        output_stream: BinaryIO,
+        dump: Dump,
     ) -> None:
         """
         Обработка блоков данных в дампе с прогресс-индикатором.
@@ -1016,7 +1006,10 @@ class DumpProcessor:
 
                         try:
                             processor.process_block(
-                                input_stream, output_stream, dump_id, dump.header.compression_method
+                                input_stream,
+                                output_stream,
+                                dump_id,
+                                dump.header.compression_method,
                             )
                         except Exception as error:
                             message = f'Error processing data block {dump_id}: {error}'
@@ -1035,7 +1028,11 @@ class DumpProcessor:
                 raise PgDumpError(message) from error
 
     def _pass_through_block(
-        self, input_stream: BinaryIO, output_stream: BinaryIO, block_type: bytes, dump_id: DumpId
+        self,
+        input_stream: Union[BinaryIO, StreamCombiner],
+        output_stream: BinaryIO,
+        block_type: bytes,
+        dump_id: DumpId,
     ) -> None:
         """
         Передача блока без обработки с оптимизацией для больших блоков.
