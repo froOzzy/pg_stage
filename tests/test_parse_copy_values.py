@@ -1,16 +1,16 @@
 import pytest
 
-from src.pg_stage.obfuscator import Obfuscator
+from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 
 @pytest.fixture(autouse=True)
-def obfuscator_object_with_delete_tables_by_pattern() -> Obfuscator:
-    return Obfuscator(delete_tables_by_pattern=[r'_table', r'schema\.\_table'])
+def obfuscator_object_with_delete_tables_by_pattern() -> PlainObfuscator:
+    return PlainObfuscator(delete_tables_by_pattern=[r'_table', r'schema\.\_table'])
 
 
 @pytest.mark.parametrize('table_name', ['table', 'schema.table'])
 def test_parse_copy_values_with_delete_comment(
-    obfuscator_object: Obfuscator,
+    obfuscator_object: PlainObfuscator,
     table_name: str,
 ) -> None:
     """
@@ -28,7 +28,7 @@ def test_parse_copy_values_with_delete_comment(
 
 @pytest.mark.parametrize('table_name', ['table', 'schema.table'])
 def test_parse_copy_values_without_delete_comment(
-    obfuscator_object: Obfuscator,
+    obfuscator_object: PlainObfuscator,
     table_name: str,
 ) -> None:
     """
@@ -45,7 +45,7 @@ def test_parse_copy_values_without_delete_comment(
 
 @pytest.mark.parametrize('table_name', ['_table', 'schema._table'])
 def test_parse_copy_values_without_delete_tables_by_pattern(
-    obfuscator_object_with_delete_tables_by_pattern: Obfuscator,
+    obfuscator_object_with_delete_tables_by_pattern: PlainObfuscator,
     table_name: str,
 ) -> None:
     """
@@ -63,7 +63,7 @@ def test_parse_copy_values_without_delete_tables_by_pattern(
 
 @pytest.mark.parametrize('table_name', ['table', 'schema.table'])
 def test_parse_copy_values_without_delete_tables_by_pattern_and_not_found_table(
-    obfuscator_object_with_delete_tables_by_pattern: Obfuscator,
+    obfuscator_object_with_delete_tables_by_pattern: PlainObfuscator,
     table_name: str,
 ) -> None:
     """

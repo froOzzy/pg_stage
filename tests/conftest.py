@@ -1,8 +1,8 @@
 import pytest
 
-from pg_stage.obfuscator import Obfuscator
+from pg_stage.obfuscators.plain import PlainObfuscator
 
 
 @pytest.fixture(autouse=True)
-def obfuscator_object() -> Obfuscator:
-    return Obfuscator()
+def obfuscator_object() -> PlainObfuscator:
+    return PlainObfuscator()

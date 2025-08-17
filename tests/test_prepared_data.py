@@ -1,10 +1,10 @@
 import uuid
 from datetime import date
 
-from src.pg_stage.obfuscator import Obfuscator
+from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 
-def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator) -> None:
+def test_parse_copy_values_with_delete_table(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблиц, данные которых необходимо удалить
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -31,7 +31,7 @@ def test_parse_copy_values_with_delete_table(obfuscator_object: Obfuscator) -> N
     assert assert_result == result  # nosec
 
 
-def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator) -> None:
+def test_parse_copy_values_with_mutation(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблиц, в которых необходимо мутировать одно или несколько полей
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -81,7 +81,7 @@ def test_parse_copy_values_with_mutation(obfuscator_object: Obfuscator) -> None:
             assert crypted_password in new_line  # nosec
 
 
-def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator) -> None:
+def test_parse_copy_values_with_relations(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблиц, в которых необходимо мутировать одно связанное поле
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -124,7 +124,7 @@ def test_parse_copy_values_with_relations(obfuscator_object: Obfuscator) -> None
     )
 
 
-def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator) -> None:
+def test_parse_copy_values_with_self_relation(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблицы, в которой необходимо мутировать данные с связанным полем внутри таблицы
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -148,7 +148,7 @@ def test_parse_copy_values_with_self_relation(obfuscator_object: Obfuscator) -> 
     assert prepared_result[1][0] == prepared_result[1][1]  # nosec
 
 
-def test_two_mutation_for_one_column(obfuscator_object: Obfuscator) -> None:
+def test_two_mutation_for_one_column(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблицы, в которой необходимо мутировать данные с двумя видами мутации
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -176,7 +176,7 @@ def test_two_mutation_for_one_column(obfuscator_object: Obfuscator) -> None:
     assert prepared_result[2][0] != '89999999999'  # nosec
 
 
-def test_obfuscate_uuid_by_source_column(obfuscator_object: Obfuscator) -> None:
+def test_obfuscate_uuid_by_source_column(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблицы, в которой определены мутации uuid на основе мутации другой колонки
     Act: Вызов функции `_parse_line` класса Obfuscator

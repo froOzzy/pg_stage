@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import BinaryIO, Iterator, Optional, Union
 
-from pg_stage.obfuscator import Obfuscator
+from pg_stage.obfuscators.plain import PlainObfuscator
 
 Version = tuple[int, int, int]
 DumpId = int
@@ -1062,7 +1062,7 @@ class DumpProcessor:
         output_stream.flush()
 
 
-class CustomObfuscator(Obfuscator):
+class CustomObfuscator(PlainObfuscator):
     """Главный класс для работы с обфускатором."""
 
     @staticmethod

@@ -22,10 +22,11 @@ of comments to a table or column.
 
 ```python
 # main.py
-from pg_stage.obfuscator import Obfuscator
+from pg_stage.obfuscators.plain import PlainObfuscator
+from pg_stage.obfuscators.custom import CustomObfuscator
 
 
-obfuscator = Obfuscator(locale='ru_RU')
+obfuscator = PlainObfuscator(locale='ru_RU') or CustomObfuscator(locale='ru_RU')  # Depending on the dump format
 obfuscator.run()
 ```
 
