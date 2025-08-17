@@ -9,8 +9,8 @@ from pg_stage.mutator import Mutator
 from pg_stage.types import ConditionTypeMany, MapTablesValueTypeMany
 
 
-class Obfuscator:
-    """Главный класс для работы с обфускатором."""
+class PlainObfuscator:
+    """Главный класс для работы с обфускатором в формате plain"""
 
     copy_parse_pattern = r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;'
     comment_table_parse_pattern = r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;'

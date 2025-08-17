@@ -1,11 +1,11 @@
 import pytest
 
-from src.pg_stage.obfuscator import Obfuscator
+from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 
 @pytest.mark.parametrize('table_name', ['table', 'schema.table'])
 def test_parse_comment_table_with_mutation(
-    obfuscator_object: Obfuscator,
+    obfuscator_object: PlainObfuscator,
     table_name: str,
 ) -> None:
     """
@@ -21,7 +21,7 @@ def test_parse_comment_table_with_mutation(
 
 @pytest.mark.parametrize('table_name', ['table', 'schema.table'])
 def test_parse_comment_table_with_invalid_mutation(
-    obfuscator_object: Obfuscator,
+    obfuscator_object: PlainObfuscator,
     table_name: str,
 ) -> None:
     """

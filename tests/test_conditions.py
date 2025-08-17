@@ -1,7 +1,7 @@
-from src.pg_stage.obfuscator import Obfuscator
+from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 
-def test_equal_condition(obfuscator_object: Obfuscator) -> None:
+def test_equal_condition(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -20,7 +20,7 @@ def test_equal_condition(obfuscator_object: Obfuscator) -> None:
                 assert 'test@mail.ru' in new_line  # nosec
 
 
-def test_not_equal_condition(obfuscator_object: Obfuscator) -> None:
+def test_not_equal_condition(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
     Act: Вызов функции `_parse_line` класса Obfuscator
@@ -39,7 +39,7 @@ def test_not_equal_condition(obfuscator_object: Obfuscator) -> None:
                 assert 'test@mail.ru' not in new_line  # nosec
 
 
-def test_by_pattern_condition(obfuscator_object: Obfuscator) -> None:
+def test_by_pattern_condition(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
     Act: Вызов функции `_parse_line` класса Obfuscator
