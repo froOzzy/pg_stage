@@ -25,8 +25,10 @@ of comments to a table or column.
 from pg_stage.obfuscators.plain import PlainObfuscator
 from pg_stage.obfuscators.custom import CustomObfuscator
 
-# Depending on the dump format
-obfuscator = PlainObfuscator(locale='ru_RU') or CustomObfuscator(locale='ru_RU')
+# Initialize obfuscator based on dump format
+# Use PlainObfuscator for default SQL text format
+# Use CustomObfuscator for custom format dumps (pg_dump -Fc)
+obfuscator = PlainObfuscator(locale='ru_RU')  # or CustomObfuscator(locale='ru_RU')
 obfuscator.run()
 ```
 
@@ -39,7 +41,12 @@ COMMENT ON COLUMN table_1.first_name IS 'anon: [{"mutation_name": "first_name"}]
 3. Run pg_dump and redirect the stream to the running script process:
 
 ```bash
-pg_dump -d database | python3 main.py > dump.sql
+# Run pg_dump with appropriate format and pipe to main.py for obfuscation
+# For PlainObfuscator: use default SQL text format
+pg_dump -d database | python3 main.py > backup.sql
+
+# For CustomObfuscator: use custom format (-Fc)
+pg_dump -Fc -d database | python3 main.py > backup.dump
 ```
 
 4. After that you will get the obfuscated data in the table
