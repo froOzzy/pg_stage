@@ -64,8 +64,6 @@ class Constants:
 class PgDumpError(Exception):
     """Базовое исключение для ошибок обработки дампов PostgreSQL."""
 
-    pass
-
 
 class CompressionMethod(Enum):
     """Поддерживаемые методы сжатия."""
@@ -205,7 +203,7 @@ class PgStageParser(DataParser):
                     processed_lines.append(line)
 
             return '\n'.join(processed_lines).encode(self.encoding)
-        except UnicodeDecodeError as error:
+        except UnicodeDecodeError:
             return data
 
 

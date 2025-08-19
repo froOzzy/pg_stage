@@ -25,8 +25,8 @@ of comments to a table or column.
 from pg_stage.obfuscators.plain import PlainObfuscator
 from pg_stage.obfuscators.custom import CustomObfuscator
 
-
-obfuscator = PlainObfuscator(locale='ru_RU') or CustomObfuscator(locale='ru_RU')  # Depending on the dump format
+# Depending on the dump format
+obfuscator = PlainObfuscator(locale='ru_RU') or CustomObfuscator(locale='ru_RU')
 obfuscator.run()
 ```
 
