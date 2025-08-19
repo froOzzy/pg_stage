@@ -11,4 +11,5 @@ setup(
     install_requires=['typing-extensions>=4.5.0', 'mimesis==4.1.3'],
     extras_require={'dev': ['pytest']},
     include_package_data=True,
+    license_files=('LICENSE.txt',),
 )
