@@ -798,94 +798,30 @@ class DataBlockProcessor:
         :param output_stream: выходной поток
         :param dump_id: ID записи дампа
         """
-        size = self.dio.read_int(input_stream)
+        output_stream.write(BlockType.DATA)
+        output_stream.write(self.dio.write_int(dump_id))
 
-        if size > Constants.STREAM_WRITE_THRESHOLD:
-            self._process_uncompressed_streaming(input_stream, output_stream, dump_id, size)
-        else:
+        while True:
+            size = self.dio.read_int(input_stream)
+            if not size or size <= 0:
+                output_stream.write(self.dio.write_int(size))
+                break
+
             data = input_stream.read(size)
+
             if len(data) != size:
                 message = f'Expected {size} bytes, got {len(data)}'
                 raise PgDumpError(message)
 
-            processed_data = self.processor.parse(data)
+            processed_data = self.processor.parse(data.decode('utf-8'))
             if isinstance(processed_data, str):
                 processed_data = processed_data.encode('utf-8')
 
-            self._write_data_block(output_stream, dump_id, processed_data)
-
-    def _process_uncompressed_streaming(
-        self,
-        input_stream: Union[BinaryIO, StreamCombiner],
-        output_stream: BinaryIO,
-        dump_id: DumpId,
-        total_size: int,
-    ) -> None:
-        """
-        Потоковая обработка больших несжатых блоков.
-        :param input_stream: входной поток
-        :param output_stream: выходной поток
-        :param dump_id: ID записи дампа
-        :param total_size: общий размер блока
-        """
-        proc_uncomp_prefix = f'{Constants.TMP_FILE_PREFIX}uncompressed_'
-        processed_fd, processed_path = tempfile.mkstemp(prefix=proc_uncomp_prefix, dir=Constants.DEFAULT_TMP_DIR)
-
-        try:
-            with os.fdopen(processed_fd, 'wb') as processed_file:
-                line_buffer = StreamingLineBuffer()
-                remaining_bytes = total_size
-
-                while remaining_bytes > 0:
-                    chunk_size = min(Constants.PROCESSING_BUFFER_SIZE, remaining_bytes)
-                    chunk = input_stream.read(chunk_size)
-
-                    if len(chunk) != chunk_size:
-                        message = f'Expected {chunk_size} bytes, got {len(chunk)}'
-                        raise PgDumpError(message)
-
-                    remaining_bytes -= len(chunk)
-
-                    complete_lines = line_buffer.add_chunk(chunk)
-                    if complete_lines:
-                        processed_data = self._process_data_chunk(complete_lines)
-                        if processed_data:
-                            processed_file.write(processed_data)
-
-                remaining = line_buffer.get_remaining()
-                if remaining:
-                    processed_data = self._process_data_chunk(remaining)
-                    if processed_data:
-                        processed_file.write(processed_data)
-
-                processed_file.flush()
-
-            file_size = os.path.getsize(processed_path)
-            output_stream.write(BlockType.DATA)
-            output_stream.write(self.dio.write_int(dump_id))
-            output_stream.write(self.dio.write_int(file_size))
-
-            with open(processed_path, 'rb') as processed_file:
-                while True:
-                    chunk = processed_file.read(Constants.COMPRESSION_BUFFER_SIZE)
-                    if not chunk:
-                        break
-                    output_stream.write(chunk)
-
+            output_stream.write(self.dio.write_int(len(processed_data)))
+            output_stream.write(processed_data)
             output_stream.flush()
 
-        finally:
-            for _ in range(3):
-                try:
-                    if processed_fd is not None:
-                        os.close(processed_fd)
-
-                    if processed_path and os.path.exists(processed_path):
-                        os.unlink(processed_path)
-
-                    break
-                except (OSError, PermissionError) as error:
-                    time.sleep(0.1)
+        output_stream.flush()
 
     def _write_data_block(self, output_stream: BinaryIO, dump_id: DumpId, data: bytes) -> None:
         """
@@ -1018,6 +954,7 @@ class DumpProcessor:
 
                 elif block_type == BlockType.END:
                     output_stream.write(block_type)
+                    output_stream.flush()
                     break
                 else:
                     output_stream.write(block_type)
