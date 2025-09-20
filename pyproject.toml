@@ -25,7 +25,7 @@ build-backend = "hatchling.build"
 name = "pg_stage"
 version = "0.4.1"
 authors = [
-  { name="froOzzy", email="ieme5gll6u78@mail.ru" },
+  { name="froOzzy", email="development@osintforce.ru" },
 ]
 description = "Anonymization of data in pg_dump"
 readme = "README.md"
