@@ -21,7 +21,6 @@ class PlainObfuscator:
         delimiter: str = '\t',
         locale: str = 'en',
         delete_tables_by_pattern: Optional[List[str]] = None,
-        secret_key: str = 'secret_key',
     ) -> None:
         """
         Метод инициализации класса.
@@ -32,9 +31,8 @@ class PlainObfuscator:
         """
         self.delimiter = delimiter
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
-        self.secret_key = secret_key
         self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
-        self._mutator = Mutator(locale=locale, secret_key=self.secret_key)
+        self._mutator = Mutator(locale=locale)
         self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
         self._is_data: bool = False

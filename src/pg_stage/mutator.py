@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import random
 import uuid
+from os import environ
 from typing import Any, Callable, List, Optional
 
 from mimesis import Address, Datetime, Internet, Numbers, Person
@@ -24,7 +25,7 @@ class Mutator:
     min_value_bigserial = 1
     max_value_bigserial = 9223372036854775807
 
-    def __init__(self, locale: str = 'en', secret_key: str = 'secret_key') -> None:
+    def __init__(self, locale: str = 'en', secret_key: Optional[str] = environ.get('SECRET_KEY')) -> None:
         """
         Метод инициализации класса.
         :param locale: локализация для Faker
@@ -569,6 +570,9 @@ class Mutator:
         obfuscated_numbers_count: Optional[int] = kwargs.get('obfuscated_numbers_count')
         if not obfuscated_numbers_count:
             raise ValueError('Argument "obfuscated_numbers_count" not found')
+
+        if not self._secret_key:
+            raise ValueError('Environment variable SECRET_KEY not set')
 
         digits: str = ''.join([digit for digit in original_phone if digit.isdigit()])
         not_obfuscated_digits: str = digits[:-obfuscated_numbers_count]
