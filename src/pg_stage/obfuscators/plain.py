@@ -27,7 +27,6 @@ class PlainObfuscator:
         :param delimiter: разделитель
         :param locale: локализация для Faker
         :param delete_tables_by_pattern: список таблиц, которые нужно очистить по паттерну
-        :param secret_key: Секретный ключ для детерминированной обфускации
         """
         self.delimiter = delimiter
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
