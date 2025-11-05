@@ -21,17 +21,20 @@ class PlainObfuscator:
         delimiter: str = '\t',
         locale: str = 'en',
         delete_tables_by_pattern: Optional[List[str]] = None,
+        secret_key: str = 'secret_key',
     ) -> None:
         """
         Метод инициализации класса.
         :param delimiter: разделитель
         :param locale: локализация для Faker
         :param delete_tables_by_pattern: список таблиц, которые нужно очистить по паттерну
+        :param secret_key: Секретный ключ для детерминированной обфускации
         """
         self.delimiter = delimiter
         self.delete_tables_by_pattern: List[str] = delete_tables_by_pattern or []
+        self.secret_key = secret_key
         self._map_tables: Dict[str, Dict[str, MapTablesValueTypeMany]] = defaultdict(dict)
-        self._mutator = Mutator(locale=locale)
+        self._mutator = Mutator(locale=locale, secret_key=self.secret_key)
         self._relation_values: Dict[str, str] = {}
         self._relation_fk: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(dict)
         self._is_data: bool = False
@@ -202,6 +205,10 @@ class PlainObfuscator:
                 mutation_kwargs = mutation_for_column['mutation_kwargs']
                 mutation_relations = mutation_for_column['mutation_relations']
                 mutation_conditions = mutation_for_column['mutation_conditions']
+
+                # Сохранить текущее значение для обработки в Mutator
+                mutation_kwargs['current_value'] = table_values[column_index]
+
                 if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
                     if mutation_index + 1 == len_mutations_for_column:
                         obfuscated_values[column_name] = table_values[column_index]
