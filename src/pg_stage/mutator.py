@@ -555,7 +555,13 @@ class Mutator:
         return str(uuid.uuid5(uuid_namespace, f'{source_value}-{self._today}'))
 
     def mutation_deterministic_phone_number(self, **kwargs: Any) -> Optional[str]:
-        """Метод для детерминированной генерации номера телефона"""
+        """
+        Метод для детерминированной генерации номера телефона
+        :param kwargs:
+            current_value: Текущее значение номера телефона
+            obfuscated_numbers_count: Количество символов с конца строки, которое необходимо обфусцировать
+        :return: Обфусцированный номер телефона
+        """
         original_phone: Optional[str] = kwargs.get('current_value')
         if not original_phone:
             return original_phone
