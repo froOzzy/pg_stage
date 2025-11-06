@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='pg_stage',
-    version='0.4.1',
+    version='0.4.2',
     packages=['pg_stage'],
     package_dir={'': 'src'},
     long_description=open(join(dirname(__file__), 'README.md')).read(),
