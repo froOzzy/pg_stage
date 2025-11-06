@@ -1,6 +1,8 @@
 import datetime
+import hashlib
 import random
 import uuid
+from os import environ
 from typing import Any, Callable, List, Optional
 
 from mimesis import Address, Datetime, Internet, Numbers, Person
@@ -23,12 +25,14 @@ class Mutator:
     min_value_bigserial = 1
     max_value_bigserial = 9223372036854775807
 
-    def __init__(self, locale: str = 'en') -> None:
+    def __init__(self, locale: str = 'en', secret_key: Optional[str] = environ.get('SECRET_KEY')) -> None:
         """
         Метод инициализации класса.
         :param locale: локализация для Faker
+        :param secret_key: Секретный ключ для детерминированной обфускации
         """
         self._locale = locale
+        self._secret_key = secret_key
         self._is_russian_locale = locale == 'ru'
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
@@ -550,3 +554,46 @@ class Mutator:
             raise ValueError(msg) from error
 
         return str(uuid.uuid5(uuid_namespace, f'{source_value}-{self._today}'))
+
+    def mutation_deterministic_phone_number(self, **kwargs: Any) -> Optional[str]:
+        """
+        Метод для детерминированной генерации номера телефона
+        :param kwargs:
+            current_value: Текущее значение номера телефона
+            obfuscated_numbers_count: Количество символов с конца строки, которое необходимо обфусцировать
+        :return: Обфусцированный номер телефона
+        """
+        original_phone: Optional[str] = kwargs.get('current_value')
+        if not original_phone:
+            return original_phone
+
+        obfuscated_numbers_count: Optional[int] = kwargs.get('obfuscated_numbers_count')
+        if not obfuscated_numbers_count:
+            raise ValueError('Argument "obfuscated_numbers_count" not found')
+
+        if not self._secret_key:
+            raise ValueError('Environment variable SECRET_KEY not set')
+
+        digits: str = ''.join([digit for digit in original_phone if digit.isdigit()])
+        not_obfuscated_digits: str = digits[:-obfuscated_numbers_count]
+
+        base_data: bytes = f'{datetime.date.today().isoformat()}{digits}{self._secret_key}'.encode()
+        base_hash: bytes = hashlib.sha256(base_data).digest()
+
+        # Второй хеш - для дополнительной уникальности
+        extra_data: bytes = f'{digits}{self._secret_key[::-1]}'.encode()
+        extra_hash: bytes = hashlib.sha512(extra_data).digest()
+
+        # Комбинируем хеши для большего пространства
+        combined_hash: bytes = base_hash + extra_hash
+
+        # Генерируем цифры номера
+        phone_digits: list[str] = []
+        for i in range(obfuscated_numbers_count):
+            # Используем разные байты для каждой цифры
+            byte_idx: int = (i * 7) % len(combined_hash)
+            digit: int = combined_hash[byte_idx] % 10
+
+            phone_digits.append(str(digit))
+
+        return f'{"".join(not_obfuscated_digits)}{"".join(phone_digits)}'

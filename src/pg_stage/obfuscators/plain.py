@@ -202,6 +202,10 @@ class PlainObfuscator:
                 mutation_kwargs = mutation_for_column['mutation_kwargs']
                 mutation_relations = mutation_for_column['mutation_relations']
                 mutation_conditions = mutation_for_column['mutation_conditions']
+
+                # Сохранить текущее значение для обработки в Mutator
+                mutation_kwargs['current_value'] = table_values[column_index]
+
                 if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
                     if mutation_index + 1 == len_mutations_for_column:
                         obfuscated_values[column_name] = table_values[column_index]
