@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import hmac
 import random
 import uuid
 from os import environ
@@ -569,31 +570,31 @@ class Mutator:
 
         obfuscated_numbers_count: Optional[int] = kwargs.get('obfuscated_numbers_count')
         if not obfuscated_numbers_count:
-            raise ValueError('Argument "obfuscated_numbers_count" not found')
+            msg_obfuscated_numbers_count = 'Argument "obfuscated_numbers_count" not found'
+            raise ValueError(msg_obfuscated_numbers_count)
 
         if not self._secret_key:
-            raise ValueError('Environment variable SECRET_KEY not set')
+            msg_secret_key = 'Environment variable SECRET_KEY not set'
+            raise ValueError(msg_secret_key)
 
         digits: str = ''.join([digit for digit in original_phone if digit.isdigit()])
         not_obfuscated_digits: str = digits[:-obfuscated_numbers_count]
 
-        base_data: bytes = f'{datetime.date.today().isoformat()}{digits}{self._secret_key}'.encode()
-        base_hash: bytes = hashlib.sha256(base_data).digest()
+        # Создаем seed на основе ключа с помощью HMAC для большей стойкости
+        seed: bytes = hmac.new(
+            key=f'{datetime.date.today().isoformat()}{self._secret_key}'.encode(),
+            msg=b'digits_permutation',
+            digestmod=hashlib.sha256,
+        ).digest()
 
-        # Второй хеш - для дополнительной уникальности
-        extra_data: bytes = f'{digits}{self._secret_key[::-1]}'.encode()
-        extra_hash: bytes = hashlib.sha512(extra_data).digest()
+        # Преобразуем seed в число для генератора псевдослучайных чисел
+        seed_int: int = int.from_bytes(seed, byteorder='big')
 
-        # Комбинируем хеши для большего пространства
-        combined_hash: bytes = base_hash + extra_hash
+        # Используем встроенный генератор с нашим seed
+        rng: random.Random = random.Random(seed_int)
 
-        # Генерируем цифры номера
-        phone_digits: list[str] = []
-        for i in range(obfuscated_numbers_count):
-            # Используем разные байты для каждой цифры
-            byte_idx: int = (i * 7) % len(combined_hash)
-            digit: int = combined_hash[byte_idx] % 10
+        # Перемешиваем список детерминировано
+        digits_list: list[str] = [value for value in digits[-obfuscated_numbers_count:]]
+        rng.shuffle(digits_list)
 
-            phone_digits.append(str(digit))
-
-        return f'{"".join(not_obfuscated_digits)}{"".join(phone_digits)}'
+        return f"{not_obfuscated_digits}{''.join(digits_list)}"
