@@ -26,14 +26,21 @@ class Mutator:
     min_value_bigserial = 1
     max_value_bigserial = 9223372036854775807
 
-    def __init__(self, locale: str = 'en', secret_key: Optional[str] = environ.get('SECRET_KEY')) -> None:
+    def __init__(
+        self,
+        locale: str = 'en',
+        secret_key: Optional[str] = environ.get('SECRET_KEY'),
+        secret_key_nonce: Optional[str] = environ.get('SECRET_KEY_NONCE'),
+    ) -> None:
         """
         Метод инициализации класса.
         :param locale: локализация для Faker
         :param secret_key: Секретный ключ для детерминированной обфускации
+        :param secret_key_nonce: Одноразовый секретный ключ (соль)
         """
         self._locale = locale
         self._secret_key = secret_key
+        self._secret_key_nonce = secret_key_nonce
         self._is_russian_locale = locale == 'ru'
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
@@ -574,15 +581,19 @@ class Mutator:
             raise ValueError(msg_obfuscated_numbers_count)
 
         if not self._secret_key:
-            msg_secret_key = 'Environment variable SECRET_KEY not set'
+            msg_secret_key = 'Environment variable SECRET_KEY not set'  # nosec B105
             raise ValueError(msg_secret_key)
+
+        if not self._secret_key_nonce:
+            msg_secret_key_nonce = 'Environment variable SECRET_KEY_NONCE not set'  # nosec B105
+            raise ValueError(msg_secret_key_nonce)
 
         digits: str = ''.join([digit for digit in original_phone if digit.isdigit()])
         not_obfuscated_digits: str = digits[:-obfuscated_numbers_count]
 
         # Создаем seed на основе ключа с помощью HMAC для большей стойкости
         seed: bytes = hmac.new(
-            key=f'{datetime.date.today().isoformat()}{self._secret_key}'.encode(),
+            key=f'{self._secret_key_nonce}{self._secret_key}'.encode(),
             msg=b'digits_permutation',
             digestmod=hashlib.sha256,
         ).digest()
@@ -594,7 +605,7 @@ class Mutator:
         rng: random.Random = random.Random(seed_int)
 
         # Перемешиваем список детерминировано
-        digits_list: list[str] = [value for value in digits[-obfuscated_numbers_count:]]
+        digits_list: list[str] = list(digits[-obfuscated_numbers_count:])
         rng.shuffle(digits_list)
 
         return f"{not_obfuscated_digits}{''.join(digits_list)}"
