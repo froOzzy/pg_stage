@@ -597,4 +597,4 @@ class Mutator:
         digits_list: list[str] = [value for value in digits[-obfuscated_numbers_count:]]
         rng.shuffle(digits_list)
 
-        return f"{not_obfuscated_digits}{''.join(digits_list)}"
+        return f'{not_obfuscated_digits}{"".join(digits_list)}'
