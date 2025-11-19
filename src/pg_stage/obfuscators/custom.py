@@ -257,10 +257,6 @@ class DumpIO:
         """
         self.int_size = int_size
         self.offset_size = offset_size
-        # Предкомпилируем для скорости
-        self._byte_struct = struct.Struct('B')
-        self._int_unpack = struct.Struct(f'B{int_size}B').unpack
-        self._offset_unpack = struct.Struct(f'{offset_size}B').unpack
 
     def read_byte(self, stream: Union[BinaryIO, StreamCombiner]) -> int:
         """
@@ -280,14 +276,14 @@ class DumpIO:
         :param stream: поток для чтения
         :return: значение целого числа
         """
-        data = stream.read(self.int_size + 1)
-        if len(data) != self.int_size + 1:
-            message = 'Unexpected EOF while reading int'
-            raise PgDumpError(message)
+        sign = self.read_byte(stream)
+        value = 0
 
-        unpacked = self._int_unpack(data)
-        sign = unpacked[0]
-        value = sum(b << (i * 8) for i, b in enumerate(unpacked[1:]) if b != 0)
+        for i in range(self.int_size):
+            byte_value = self.read_byte(stream)
+            if byte_value != 0:
+                value += byte_value << (i * 8)
+
         return -value if sign else value
 
     def read_string(self, stream: Union[BinaryIO, StreamCombiner]) -> str:
