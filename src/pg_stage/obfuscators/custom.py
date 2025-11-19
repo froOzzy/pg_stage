@@ -282,7 +282,8 @@ class DumpIO:
         """
         data = stream.read(self.int_size + 1)
         if len(data) != self.int_size + 1:
-            raise PgDumpError('Unexpected EOF')
+            message = 'Unexpected EOF while reading int'
+            raise PgDumpError(message)
 
         unpacked = self._int_unpack(data)
         sign = unpacked[0]
