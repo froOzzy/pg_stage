@@ -53,10 +53,9 @@ class Constants:
     ZLIB_CHUNK_SIZE = 4096
     DEFAULT_BUFFER_SIZE = 1024 * 1024
     MAX_CHUNK_SIZE = 50 * 1024 * 1024
-    PROCESSING_BUFFER_SIZE = 64 * 1024
-    COMPRESSION_BUFFER_SIZE = 32 * 1024
+    PROCESSING_BUFFER_SIZE = 256 * 1024
+    COMPRESSION_BUFFER_SIZE = 128 * 1024
     COMPRESSION_LEVEL = 6
-    STREAM_WRITE_THRESHOLD = 10 * 1024 * 1024
     DEFAULT_TMP_DIR = os.getcwd()
     TMP_FILE_PREFIX = 'pg_dump_'
 
@@ -69,7 +68,7 @@ class CompressionMethod(Enum):
     """Поддерживаемые методы сжатия."""
 
     NONE = 'none'
-    GZIP = 'gzip'
+    RAW = 'raw'
     ZLIB = 'zlib'
     LZ4 = 'lz4'
 
@@ -171,13 +170,11 @@ class DataParser(metaclass=ABCMeta):
 class PgStageParser(DataParser):
     """Процессор обфускации из библиотеки pg_stage."""
 
-    def __init__(self, parser, encoding: str = 'utf-8'):
+    def __init__(self, parser):
         """
         Инициализация процессора обфускации.
         :param parser: функция парсинга из обфускатора
-        :param encoding: кодировка для работы с текстом
         """
-        self.encoding = encoding
         self.parser = parser
 
     def parse(self, data: Union[str, bytes]) -> Union[str, bytes]:
@@ -193,18 +190,26 @@ class PgStageParser(DataParser):
             return self.parser(line=data)
 
         try:
-            lines = data.decode('utf-8').split('\n')
-            processed_lines = []
-            for line in lines:
-                if line:
-                    line = self.parser(line=line)
-
-                if isinstance(line, str):
-                    processed_lines.append(line)
-
-            return '\n'.join(processed_lines).encode(self.encoding)
+            text = data.decode()
         except UnicodeDecodeError:
             return data
+
+        lines = text.split('\n')
+        changed = False
+
+        for index, line in enumerate(lines):
+            if not line:
+                continue
+
+            new_line = self.parser(line=line)
+            if isinstance(new_line, str) and new_line is not line:
+                lines[index] = new_line
+                changed = True
+
+        if not changed:
+            return data
+
+        return '\n'.join(lines).encode()
 
 
 class StreamCombiner:
@@ -252,6 +257,10 @@ class DumpIO:
         """
         self.int_size = int_size
         self.offset_size = offset_size
+        # Предкомпилируем для скорости
+        self._byte_struct = struct.Struct('B')
+        self._int_unpack = struct.Struct(f'B{int_size}B').unpack
+        self._offset_unpack = struct.Struct(f'{offset_size}B').unpack
 
     def read_byte(self, stream: Union[BinaryIO, StreamCombiner]) -> int:
         """
@@ -271,14 +280,13 @@ class DumpIO:
         :param stream: поток для чтения
         :return: значение целого числа
         """
-        sign = self.read_byte(stream)
-        value = 0
+        data = stream.read(self.int_size + 1)
+        if len(data) != self.int_size + 1:
+            raise PgDumpError('Unexpected EOF')
 
-        for i in range(self.int_size):
-            byte_value = self.read_byte(stream)
-            if byte_value != 0:
-                value += byte_value << (i * 8)
-
+        unpacked = self._int_unpack(data)
+        sign = unpacked[0]
+        value = sum(b << (i * 8) for i, b in enumerate(unpacked[1:]) if b != 0)
         return -value if sign else value
 
     def read_string(self, stream: Union[BinaryIO, StreamCombiner]) -> str:
@@ -407,7 +415,7 @@ class HeaderParser:
             compression_byte = self.dio.read_byte(stream)
             compression_map = {
                 0: CompressionMethod.NONE,
-                1: CompressionMethod.GZIP,
+                1: CompressionMethod.RAW,
                 2: CompressionMethod.LZ4,
                 3: CompressionMethod.ZLIB,
             }
@@ -422,7 +430,7 @@ class HeaderParser:
             elif compression == 0:
                 compression_method = CompressionMethod.NONE
             elif 1 <= compression <= 9:
-                compression_method = CompressionMethod.GZIP
+                compression_method = CompressionMethod.RAW
             else:
                 message = f'Invalid compression level: {compression}'
                 raise PgDumpError(message)
@@ -621,7 +629,7 @@ class DataBlockProcessor:
         :param dump_id: ID записи дампа
         :param compression: метод сжатия
         """
-        if compression == CompressionMethod.ZLIB:
+        if compression in (CompressionMethod.ZLIB, CompressionMethod.RAW):
             self._process_compressed_block(input_stream, output_stream, dump_id)
         else:
             self._process_uncompressed_block(input_stream, output_stream, dump_id)
@@ -801,10 +809,12 @@ class DataBlockProcessor:
         output_stream.write(BlockType.DATA)
         output_stream.write(self.dio.write_int(dump_id))
 
+        line_buffer = StreamingLineBuffer()
+        output_buffer = bytearray()
+
         while True:
             size = self.dio.read_int(input_stream)
             if not size or size <= 0:
-                output_stream.write(self.dio.write_int(size))
                 break
 
             data = input_stream.read(size)
@@ -813,14 +823,30 @@ class DataBlockProcessor:
                 message = f'Expected {size} bytes, got {len(data)}'
                 raise PgDumpError(message)
 
-            processed_data = self.processor.parse(data)
+            complete_lines = line_buffer.add_chunk(data)
+            if complete_lines:
+                processed_data = self.processor.parse(complete_lines)
+                if isinstance(processed_data, str):
+                    processed_data = processed_data.encode()
+                output_buffer.extend(processed_data)
+
+            if len(output_buffer) >= Constants.PROCESSING_BUFFER_SIZE:
+                output_stream.write(self.dio.write_int(len(output_buffer)))
+                output_stream.write(output_buffer)
+                output_buffer.clear()
+
+        remaining_data = line_buffer.get_remaining()
+        if remaining_data:
+            processed_data = self.processor.parse(remaining_data)
             if isinstance(processed_data, str):
-                processed_data = processed_data.encode('utf-8')
+                processed_data = processed_data.encode()
+            output_buffer.extend(processed_data)
 
-            output_stream.write(self.dio.write_int(len(processed_data)))
-            output_stream.write(processed_data)
-            output_stream.flush()
+        if len(output_buffer) > 0:
+            output_stream.write(self.dio.write_int(len(output_buffer)))
+            output_stream.write(output_buffer)
 
+        output_stream.write(self.dio.write_int(0))
         output_stream.flush()
 
     def _write_data_block(self, output_stream: BinaryIO, dump_id: DumpId, data: bytes) -> None:
@@ -865,7 +891,8 @@ class DumpProcessor:
         :return: объект дампа и комбинированный поток
         """
         buffer = io.BytesIO()
-        dump = None
+        dump: Optional[Dump] = None
+        header: Optional[Header] = None
 
         while dump is None:
             chunk = input_stream.read(Constants.DEFAULT_BUFFER_SIZE)
@@ -877,8 +904,9 @@ class DumpProcessor:
             buffer.seek(0)
 
             try:
-                header_parser = HeaderParser(self.dio)
-                header = header_parser.parse(buffer)
+                if header is None:
+                    header_parser = HeaderParser(self.dio)
+                    header = header_parser.parse(buffer)
 
                 toc_parser = TocParser(self.dio)
                 toc_entries = toc_parser.parse(buffer, header.version)
