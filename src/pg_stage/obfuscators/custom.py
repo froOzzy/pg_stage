@@ -905,9 +905,8 @@ class DumpProcessor:
             buffer.seek(0)
 
             try:
-                if header is None:
-                    header_parser = HeaderParser(self.dio)
-                    header = header_parser.parse(buffer)
+                header_parser = HeaderParser(self.dio)
+                header = header_parser.parse(buffer)
 
                 toc_parser = TocParser(self.dio)
                 toc_entries = toc_parser.parse(buffer, header.version)
