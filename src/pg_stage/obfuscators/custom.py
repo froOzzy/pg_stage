@@ -51,7 +51,7 @@ class Constants:
     MAGIC_HEADER = b'PGDMP'
     CUSTOM_FORMAT = 1
     ZLIB_CHUNK_SIZE = 4096
-    DEFAULT_BUFFER_SIZE = 1024 * 1024
+    DEFAULT_BUFFER_SIZE = 65 * 1024
     MAX_CHUNK_SIZE = 50 * 1024 * 1024
     PROCESSING_BUFFER_SIZE = 256 * 1024
     COMPRESSION_BUFFER_SIZE = 128 * 1024
@@ -212,14 +212,16 @@ class PgStageParser(DataParser):
         return '\n'.join(lines).encode()
 
 
-class StreamCombiner:
-    """Объединяет несколько потоков в один последовательный поток."""
+class BufferedStreamReader:
+    """
+    Читает данные из входного потока блоками (chunk), накапливает буфер
+    и позволяет копировать прочитанное в output_stream (bypass).
+    """
 
     def __init__(self, input_stream: BinaryIO, output_stream: BinaryIO):
         """
-        Инициализация с несколькими потоками.
-        :param input_stream: Входной поток
-        :param output_stream: Исходящий поток
+        :param input_stream: Входной поток (например, stdout процесса)
+        :param output_stream: Исходящий поток для копии (например, sys.stdout)
         """
         self._in_stream = input_stream
         self._out_stream = output_stream
@@ -227,36 +229,49 @@ class StreamCombiner:
         self._bypass = False
 
     def bypass_on(self) -> None:
-        """Включить bypass"""
+        """Включить дублирование данных в output_stream глобально."""
         self._bypass = True
 
     def bypass_off(self) -> None:
-        """Выключить bypass"""
+        """Выключить дублирование данных."""
         self._bypass = False
 
-    def read(self, size: int = -1, bypass: bool = False) -> bytes:
+    def read(self, size: int = -1) -> bytes:
         """
-        Чтение данных из потоков последовательно.
-        :param size: количество байт для чтения
-        :param bypass: пустить данные в stdout
-        :return: прочитанные данные
+        Чтение данных из буфера.
+        Если данных в буфере недостаточно, дочитывает их из потока блоками.
+
+        :param size: количество байт (-1 для чтения всего доступного до EOF)
+        :return: прочитанные байты
         """
-        if size <= 0:
+        if size == 0:
             return b''
 
-        while len(self._buffer) < size:
-            chunk = self._in_stream.readline()
+        read_all = (size < 0)
+
+        while read_all or len(self._buffer) < size:
+            chunk = self._in_stream.read(Constants.DEFAULT_BUFFER_SIZE)
             if not chunk:
-                return b''
+                break
+
             self._buffer.extend(chunk)
 
-        out = self._buffer[:size]
+        if read_all:
+            available = len(self._buffer)
+        else:
+            available = min(len(self._buffer), size)
+
+        if available == 0:
+            return b''
+
+        data = self._buffer[:available]
+        del self._buffer[:available]
+
         if self._bypass:
-            self._out_stream.write(out)
+            self._out_stream.write(data)
+            self._out_stream.flush()
 
-        del self._buffer[:size]
-
-        return bytes(out)
+        return bytes(data)
 
 
 class DumpIO:
@@ -275,7 +290,7 @@ class DumpIO:
         self._int_unpack = struct.Struct(f'B{int_size}B').unpack
         self._offset_unpack = struct.Struct(f'{offset_size}B').unpack
 
-    def read_byte(self, stream: Union[BinaryIO, StreamCombiner]) -> int:
+    def read_byte(self, stream: Union[BinaryIO, BufferedStreamReader]) -> int:
         """
         Чтение одного байта.
         :param stream: поток для чтения
@@ -287,7 +302,7 @@ class DumpIO:
             raise PgDumpError(message)
         return struct.unpack('B', data)[0]
 
-    def read_int(self, stream: Union[BinaryIO, StreamCombiner]) -> int:
+    def read_int(self, stream: Union[BinaryIO, BufferedStreamReader]) -> int:
         """
         Чтение знакового целого числа с переменным размером.
         :param stream: поток для чтения
@@ -303,7 +318,7 @@ class DumpIO:
         value = sum(b << (i * 8) for i, b in enumerate(unpacked[1:]) if b != 0)
         return -value if sign else value
 
-    def read_string(self, stream: Union[BinaryIO, StreamCombiner]) -> str:
+    def read_string(self, stream: Union[BinaryIO, BufferedStreamReader]) -> str:
         """
         Чтение строки UTF-8 с префиксом длины.
         :param stream: поток для чтения
@@ -324,7 +339,7 @@ class DumpIO:
             message = f'Invalid UTF-8 string: {error}'
             raise PgDumpError(message) from error
 
-    def read_offset(self, stream: Union[BinaryIO, StreamCombiner]) -> Offset:
+    def read_offset(self, stream: Union[BinaryIO, BufferedStreamReader]) -> Offset:
         """
         Чтение значения смещения.
         :param stream: поток для чтения
@@ -364,7 +379,7 @@ class HeaderParser:
         """
         self.dio = dio
 
-    def parse(self, stream: StreamCombiner) -> Header:
+    def parse(self, stream: BufferedStreamReader) -> Header:
         """
         Парсинг заголовка файла дампа.
         :param stream: поток для чтения
@@ -631,7 +646,7 @@ class DataBlockProcessor:
 
     def process_block(
         self,
-        input_stream: Union[BinaryIO, StreamCombiner],
+        input_stream: Union[BinaryIO, BufferedStreamReader],
         output_stream: BinaryIO,
         dump_id: DumpId,
         compression: CompressionMethod,
@@ -650,7 +665,7 @@ class DataBlockProcessor:
 
     def _process_compressed_block(
         self,
-        input_stream: Union[BinaryIO, StreamCombiner],
+        input_stream: Union[BinaryIO, BufferedStreamReader],
         output_stream: BinaryIO,
         dump_id: DumpId,
     ) -> None:
@@ -684,7 +699,7 @@ class DataBlockProcessor:
                         except (OSError, PermissionError) as error:
                             time.sleep(0.1)
 
-    def _stream_decompress(self, input_stream: Union[BinaryIO, StreamCombiner], output_fd: int) -> None:
+    def _stream_decompress(self, input_stream: Union[BinaryIO, BufferedStreamReader], output_fd: int) -> None:
         """
         Потоковая декомпрессия данных.
         :param input_stream: входной поток
@@ -810,7 +825,7 @@ class DataBlockProcessor:
 
     def _process_uncompressed_block(
         self,
-        input_stream: Union[BinaryIO, StreamCombiner],
+        input_stream: Union[BinaryIO, BufferedStreamReader],
         output_stream: BinaryIO,
         dump_id: DumpId,
     ) -> None:
@@ -894,7 +909,7 @@ class DumpProcessor:
         :param input_stream: входной поток
         :param output_stream: выходной поток
         """
-        buffered_stream = StreamCombiner(input_stream, output_stream)
+        buffered_stream = BufferedStreamReader(input_stream, output_stream)
 
         buffered_stream.bypass_on()
         dump = self._parse_header_and_toc(buffered_stream, output_stream)
@@ -902,7 +917,7 @@ class DumpProcessor:
 
         self._process_data_blocks(buffered_stream, output_stream, dump)
 
-    def _parse_header_and_toc(self, input_stream: Union[BinaryIO, StreamCombiner], output_stream: BinaryIO) -> Dump:
+    def _parse_header_and_toc(self, input_stream: Union[BinaryIO, BufferedStreamReader], output_stream: BinaryIO) -> Dump:
         """
         Парсинг заголовка и TOC с записью в выходной поток.
         :param input_stream: входной поток
@@ -921,7 +936,7 @@ class DumpProcessor:
 
     def _process_data_blocks(
         self,
-        input_stream: Union[BinaryIO, StreamCombiner],
+        input_stream: Union[BinaryIO, BufferedStreamReader],
         output_stream: BinaryIO,
         dump: Dump,
     ) -> None:
@@ -983,7 +998,7 @@ class DumpProcessor:
 
     def _pass_through_block(
         self,
-        input_stream: Union[BinaryIO, StreamCombiner],
+        input_stream: Union[BinaryIO, BufferedStreamReader],
         output_stream: BinaryIO,
         block_type: bytes,
         dump_id: DumpId,
