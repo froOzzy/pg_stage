@@ -215,35 +215,48 @@ class PgStageParser(DataParser):
 class StreamCombiner:
     """Объединяет несколько потоков в один последовательный поток."""
 
-    def __init__(self, *streams: BinaryIO):
+    def __init__(self, input_stream: BinaryIO, output_stream: BinaryIO):
         """
         Инициализация с несколькими потоками.
-        :param streams: потоки для объединения
+        :param input_stream: Входной поток
+        :param output_stream: Исходящий поток
         """
-        self.streams = list(streams)
-        self.current_index = 0
+        self._in_stream = input_stream
+        self._out_stream = output_stream
+        self._buffer = bytearray()
+        self._bypass = False
 
-    def read(self, size: int = -1) -> bytes:
+    def bypass_on(self) -> None:
+        """Включить bypass"""
+        self._bypass = True
+
+    def bypass_off(self) -> None:
+        """Выключить bypass"""
+        self._bypass = False
+
+    def read(self, size: int = -1, bypass: bool = False) -> bytes:
         """
         Чтение данных из потоков последовательно.
         :param size: количество байт для чтения
+        :param bypass: пустить данные в stdout
         :return: прочитанные данные
         """
-        if self.current_index >= len(self.streams):
+        if size <= 0:
             return b''
 
-        data = self.streams[self.current_index].read(size)
+        while len(self._buffer) < size:
+            chunk = self._in_stream.readline()
+            if not chunk:
+                return b''
+            self._buffer.extend(chunk)
 
-        if size != -1 and len(data) < size and data != b'':
-            remaining = size - len(data)
-            self.current_index += 1
-            more_data = self.read(remaining)
-            data += more_data
-        elif not data:
-            self.current_index += 1
-            return self.read(size)
+        out = self._buffer[:size]
+        if self._bypass:
+            self._out_stream.write(out)
 
-        return data
+        del self._buffer[:size]
+
+        return bytes(out)
 
 
 class DumpIO:
@@ -351,7 +364,7 @@ class HeaderParser:
         """
         self.dio = dio
 
-    def parse(self, stream: BinaryIO) -> Header:
+    def parse(self, stream: StreamCombiner) -> Header:
         """
         Парсинг заголовка файла дампа.
         :param stream: поток для чтения
@@ -881,53 +894,30 @@ class DumpProcessor:
         :param input_stream: входной поток
         :param output_stream: выходной поток
         """
-        dump, combined_stream = self._parse_header_and_toc(input_stream, output_stream)
-        self._process_data_blocks(combined_stream, output_stream, dump)
+        buffered_stream = StreamCombiner(input_stream, output_stream)
 
-    def _parse_header_and_toc(self, input_stream: BinaryIO, output_stream: BinaryIO) -> tuple[Dump, StreamCombiner]:
+        buffered_stream.bypass_on()
+        dump = self._parse_header_and_toc(buffered_stream, output_stream)
+        buffered_stream.bypass_off()
+
+        self._process_data_blocks(buffered_stream, output_stream, dump)
+
+    def _parse_header_and_toc(self, input_stream: Union[BinaryIO, StreamCombiner], output_stream: BinaryIO) -> Dump:
         """
         Парсинг заголовка и TOC с записью в выходной поток.
         :param input_stream: входной поток
         :param output_stream: выходной поток
         :return: объект дампа и комбинированный поток
         """
-        buffer = io.BytesIO()
-        dump: Optional[Dump] = None
-        header: Optional[Header] = None
+        header_parser = HeaderParser(self.dio)
+        header = header_parser.parse(input_stream)
 
-        while dump is None:
-            chunk = input_stream.read(Constants.DEFAULT_BUFFER_SIZE)
-            if not chunk:
-                message = 'Unexpected EOF while reading header/TOC'
-                raise PgDumpError(message)
+        toc_parser = TocParser(self.dio)
+        toc_entries = toc_parser.parse(input_stream, header.version)
 
-            buffer.write(chunk)
-            buffer.seek(0)
+        dump = Dump(header=header, toc_entries=toc_entries)
 
-            try:
-                header_parser = HeaderParser(self.dio)
-                header = header_parser.parse(buffer)
-
-                toc_parser = TocParser(self.dio)
-                toc_entries = toc_parser.parse(buffer, header.version)
-
-                dump = Dump(header=header, toc_entries=toc_entries)
-
-            except (PgDumpError, struct.error):
-                buffer.seek(0, io.SEEK_END)
-                continue
-
-        toc_end_pos = buffer.tell()
-        buffer.seek(0)
-
-        header_toc_data = buffer.read(toc_end_pos)
-        output_stream.write(header_toc_data)
-        output_stream.flush()
-
-        remaining_data = buffer.read()
-        combined_stream = StreamCombiner(io.BytesIO(remaining_data), input_stream)
-
-        return dump, combined_stream
+        return dump
 
     def _process_data_blocks(
         self,
