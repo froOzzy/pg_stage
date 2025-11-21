@@ -58,7 +58,7 @@ class Mutator:
         """Метод для сброса уникальных значений."""
         self._unique_values.clear()
 
-    def _generate_unique_value(self, func: Callable[[Any], Any], *args: Any, **kwargs: Any) -> Any:
+    def _generate_unique_value(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Метод для генерации уникального значения."""
         counter = 0
         while True:
@@ -250,7 +250,7 @@ class Mutator:
         """
         start: int = kwargs.get('start', self._now.year - 1)
         end: int = kwargs.get('end', self._now.year)
-        date_format: int = kwargs.get('date_format', '%Y-%m-%d')
+        date_format: str = kwargs.get('date_format', '%Y-%m-%d')
         unique: bool = kwargs.get('unique', False)
         if unique:
             return self._generate_unique_value(func=self._datetime.date, start=start, end=end).strftime(date_format)
