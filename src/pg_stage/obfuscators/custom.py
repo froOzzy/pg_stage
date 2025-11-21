@@ -247,7 +247,7 @@ class BufferedStreamReader:
         if size == 0:
             return b''
 
-        read_all = (size < 0)
+        read_all = size < 0
 
         while read_all or len(self._buffer) < size:
             chunk = self._in_stream.read(Constants.DEFAULT_BUFFER_SIZE)
@@ -379,7 +379,7 @@ class HeaderParser:
         """
         self.dio = dio
 
-    def parse(self, stream: BufferedStreamReader) -> Header:
+    def parse(self, stream: Union[BinaryIO, BufferedStreamReader]) -> Header:
         """
         Парсинг заголовка файла дампа.
         :param stream: поток для чтения
@@ -433,7 +433,7 @@ class HeaderParser:
             message = f'Unsupported version: {version_str}'
             raise PgDumpError(message)
 
-    def _parse_compression(self, stream: BinaryIO, version: Version) -> CompressionMethod:
+    def _parse_compression(self, stream: Union[BinaryIO, BufferedStreamReader], version: Version) -> CompressionMethod:
         """
         Парсинг метода сжатия в зависимости от версии.
         :param stream: поток для чтения
@@ -466,7 +466,7 @@ class HeaderParser:
 
         return compression_method
 
-    def _parse_date(self, stream: BinaryIO) -> datetime.datetime:
+    def _parse_date(self, stream: Union[BinaryIO, BufferedStreamReader]) -> datetime.datetime:
         """
         Парсинг даты создания из дампа.
         :param stream: поток для чтения
@@ -497,7 +497,7 @@ class TocParser:
         """
         self.dio = dio
 
-    def parse(self, stream: BinaryIO, version: Version) -> list[TocEntry]:
+    def parse(self, stream: Union[BinaryIO, BufferedStreamReader], version: Version) -> list[TocEntry]:
         """
         Парсинг всех записей TOC.
         :param stream: поток для чтения
@@ -507,7 +507,7 @@ class TocParser:
         num_entries = self.dio.read_int(stream)
         return [self._parse_entry(stream, version) for _ in range(num_entries)]
 
-    def _parse_entry(self, stream: BinaryIO, version: Version) -> TocEntry:
+    def _parse_entry(self, stream: Union[BinaryIO, BufferedStreamReader], version: Version) -> TocEntry:
         """
         Парсинг одной записи TOC.
         :param stream: поток для чтения
@@ -578,7 +578,7 @@ class TocParser:
         }
         return section_map.get(section_idx, SectionType.NONE)
 
-    def _parse_dependencies(self, stream: BinaryIO) -> list[DumpId]:
+    def _parse_dependencies(self, stream: Union[BinaryIO, BufferedStreamReader]) -> list[DumpId]:
         """
         Парсинг списка зависимостей.
         :param stream: поток для чтения
@@ -912,16 +912,15 @@ class DumpProcessor:
         buffered_stream = BufferedStreamReader(input_stream, output_stream)
 
         buffered_stream.bypass_on()
-        dump = self._parse_header_and_toc(buffered_stream, output_stream)
+        dump = self._parse_header_and_toc(buffered_stream)
         buffered_stream.bypass_off()
 
         self._process_data_blocks(buffered_stream, output_stream, dump)
 
-    def _parse_header_and_toc(self, input_stream: Union[BinaryIO, BufferedStreamReader], output_stream: BinaryIO) -> Dump:
+    def _parse_header_and_toc(self, input_stream: Union[BinaryIO, BufferedStreamReader]) -> Dump:
         """
         Парсинг заголовка и TOC с записью в выходной поток.
         :param input_stream: входной поток
-        :param output_stream: выходной поток
         :return: объект дампа и комбинированный поток
         """
         header_parser = HeaderParser(self.dio)
