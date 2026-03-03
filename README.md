@@ -28,7 +28,7 @@ from pg_stage.obfuscators.custom import CustomObfuscator
 # Initialize obfuscator based on dump format
 # Use PlainObfuscator for default SQL text format
 # Use CustomObfuscator for custom format dumps (pg_dump -Fc)
-obfuscator = PlainObfuscator(locale='ru_RU')  # or CustomObfuscator(locale='ru_RU')
+obfuscator = PlainObfuscator(locale='ru')  # or CustomObfuscator(locale='ru')
 obfuscator.run()
 ```
 
