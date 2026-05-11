@@ -53,8 +53,6 @@ class Mutator:
         :param secret_key_nonce: Одноразовый секретный ключ (соль)
         """
         self._locale = locale
-        self._secret_key = secret_key
-        self._secret_key_nonce = secret_key_nonce
         self._is_russian_locale = locale == 'ru'
         self._person = Person(locale=self._locale)
         self._address = Address(locale=self._locale)
@@ -65,8 +63,17 @@ class Mutator:
         self._current_year = datetime.date.today().year
         self._now = datetime.datetime.now()
         self._today = self._now.date()
-        self._cache = {}  # type: ignore
         self._unique_values = set()  # type: ignore
+
+        if secret_key and secret_key_nonce:
+            seed = hmac.new(
+                key=f'{secret_key_nonce}{secret_key}'.encode(),
+                msg=b'digits_permutation',
+                digestmod=hashlib.sha256,
+            ).digest()
+            self._deterministic_rng = random.Random(int.from_bytes(seed, byteorder='big'))
+        else:
+            self._deterministic_rng = None
 
     def clear_unique_values(self) -> None:
         """Метод для сброса уникальных значений."""
@@ -74,20 +81,14 @@ class Mutator:
 
     def _generate_unique_value(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Метод для генерации уникального значения."""
-        counter = 0
-        while True:
-            if counter > 1000:
-                msg = 'Exceeded the number of attempts to generate a unique value!'
-                raise RecursionError(msg)
-
+        for _ in range(1000):
             value = func(*args, **kwargs)
             if value not in self._unique_values:
                 self._unique_values.add(value)
-                break
+                return value
 
-            counter += 1
-
-        return value
+        msg = 'Exceeded the number of attempts to generate a unique value!'
+        raise RecursionError(msg)
 
     @staticmethod
     def _random_int(a: int, b: int) -> int:
@@ -198,7 +199,7 @@ class Mutator:
                 else:
                     value = self._person.full_name(reverse=True)
 
-                if not set(value) & self._unique_values:
+                if value not in self._unique_values:
                     self._unique_values.add(value)
                     break
 
@@ -626,33 +627,16 @@ class Mutator:
             msg_obfuscated_numbers_count = 'Argument "obfuscated_numbers_count" not found'
             raise ValueError(msg_obfuscated_numbers_count)
 
-        if not self._secret_key:
-            msg_secret_key = 'Environment variable SECRET_KEY not set'  # nosec B105
+        if self._deterministic_rng is None:
+            msg_secret_key = 'Environment variable SECRET_KEY or SECRET_KEY_NONCE not set'  # nosec B105
             raise ValueError(msg_secret_key)
-
-        if not self._secret_key_nonce:
-            msg_secret_key_nonce = 'Environment variable SECRET_KEY_NONCE not set'  # nosec B105
-            raise ValueError(msg_secret_key_nonce)
 
         digits: str = ''.join([digit for digit in original_phone if digit.isdigit()])
         not_obfuscated_digits: str = digits[:-obfuscated_numbers_count]
 
-        # Создаем seed на основе ключа с помощью HMAC для большей стойкости
-        seed: bytes = hmac.new(
-            key=f'{self._secret_key_nonce}{self._secret_key}'.encode(),
-            msg=b'digits_permutation',
-            digestmod=hashlib.sha256,
-        ).digest()
-
-        # Преобразуем seed в число для генератора псевдослучайных чисел
-        seed_int: int = int.from_bytes(seed, byteorder='big')
-
-        # Используем встроенный генератор с нашим seed
-        rng: random.Random = random.Random(seed_int)
-
         # Перемешиваем список детерминировано
         digits_list: list[str] = list(digits[-obfuscated_numbers_count:])
-        rng.shuffle(digits_list)
+        self._deterministic_rng.shuffle(digits_list)
 
         return f'{not_obfuscated_digits}{"".join(digits_list)}'
 
@@ -754,4 +738,4 @@ class Mutator:
 
             updated_data[key] = new_value
 
-        return json.dumps(updated_data, ensure_ascii=False)
+        return json.dumps(updated_data, ensure_ascii=False, separators=(',', ':'))
