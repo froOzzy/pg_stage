@@ -43,3 +43,7 @@ class MapTablesValueType(TypedDict):
 
 
 MapTablesValueTypeMany = List[MapTablesValueType]
+
+Version = tuple[int, int, int]
+DumpId = int
+Offset = int
