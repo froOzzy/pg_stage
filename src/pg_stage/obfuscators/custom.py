@@ -9,150 +9,16 @@ import time
 import zlib
 from abc import ABCMeta, abstractmethod
 from contextlib import suppress
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import BinaryIO, Iterator, Optional, Union
+from typing import BinaryIO, Union
 
+from pg_stage.constants import BlockType, CompressionMethod, Constants, PostgreSQLVersions, SectionType
+from pg_stage.dataclasses import Dump, Header, TocEntry
+from pg_stage.exceptions import PgDumpError
 from pg_stage.obfuscators.plain import PlainObfuscator
+from pg_stage.types import Version
 
-Version = tuple[int, int, int]
 DumpId = int
 Offset = int
-
-
-class PostgreSQLVersions:
-    """Константы версий PostgreSQL для совместимости формата дампов."""
-
-    V1_12 = (1, 12, 0)
-    V1_13 = (1, 13, 0)
-    V1_14 = (1, 14, 0)
-    V1_15 = (1, 15, 0)
-    V1_16 = (1, 16, 0)
-
-
-class OffsetPosition:
-    """Константы позиции смещения."""
-
-    SET = 2
-    NOT_SET = 1
-
-
-class BlockType:
-    """Идентификаторы типов блоков."""
-
-    DATA = b'\x01'
-    BLOBS = b'\x02'
-    END = b'\x04'
-
-
-class Constants:
-    """Общие константы."""
-
-    MAGIC_HEADER = b'PGDMP'
-    CUSTOM_FORMAT = 1
-    ZLIB_CHUNK_SIZE = 1024 * 1024  # 1MB - увеличен для уменьшения системных вызовов
-    DEFAULT_BUFFER_SIZE = 2 * 1024 * 1024  # 2MB для чтения блоков
-    MAX_CHUNK_SIZE = 50 * 1024 * 1024
-    PROCESSING_BUFFER_SIZE = 512 * 1024  # 512KB для обработки
-    COMPRESSION_BUFFER_SIZE = 2 * 1024 * 1024  # 2MB для компрессии
-    COMPRESSION_LEVEL = 6
-    DEFAULT_TMP_DIR = os.getcwd()
-    TMP_FILE_PREFIX = 'pg_dump_'
-    LINE_BATCH_SIZE = 1000  # Количество строк для батчинга при записи
-
-
-class PgDumpError(Exception):
-    """Базовое исключение для ошибок обработки дампов PostgreSQL."""
-
-
-class CompressionMethod(Enum):
-    """Поддерживаемые методы сжатия."""
-
-    NONE = 'none'
-    RAW = 'raw'
-    ZLIB = 'zlib'
-    LZ4 = 'lz4'
-
-    def __str__(self) -> str:
-        return self.value
-
-
-class SectionType(Enum):
-    """Типы секций дампа."""
-
-    PRE_DATA = 'SECTION_PRE_DATA'
-    DATA = 'SECTION_DATA'
-    POST_DATA = 'SECTION_POST_DATA'
-    NONE = 'SECTION_NONE'
-
-
-@dataclass(frozen=True)
-class Header:
-    """Информация заголовка файла дампа PostgreSQL."""
-
-    magic: bytes
-    version: Version
-    database_name: str
-    server_version: str
-    pgdump_version: str
-    compression_method: CompressionMethod
-    create_date: datetime.datetime
-    int_size: int = 4
-    offset_size: int = 8
-
-
-@dataclass(frozen=True)
-class TocEntry:
-    """Запись оглавления (Table of Contents)."""
-
-    dump_id: DumpId
-    section: SectionType
-    had_dumper: bool
-    tag: Optional[str] = None
-    tablespace: Optional[str] = None
-    namespace: Optional[str] = None
-    tableam: Optional[str] = None
-    owner: Optional[str] = None
-    desc: Optional[str] = None
-    defn: Optional[str] = None
-    drop_stmt: Optional[str] = None
-    copy_stmt: Optional[str] = None
-    with_oids: Optional[str] = None
-    oid: Optional[str] = None
-    table_oid: Optional[str] = None
-    data_state: int = 0
-    offset: Offset = 0
-    dependencies: list[DumpId] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class Dump:
-    """Полная структура файла дампа."""
-
-    header: Header
-    toc_entries: list[TocEntry]
-
-    def get_table_data_entries(self) -> Iterator[TocEntry]:
-        """
-        Получить все записи данных таблиц.
-        :return: итератор записей с данными таблиц
-        """
-        return (entry for entry in self.toc_entries if entry.desc == 'TABLE DATA')
-
-    def get_comment_entries(self) -> Iterator[TocEntry]:
-        """
-        Получить все записи комментариев.
-        :return: итератор записей комментариев
-        """
-        return (entry for entry in self.toc_entries if entry.desc == 'COMMENT')
-
-    def get_entry_by_id(self, dump_id: DumpId) -> Optional[TocEntry]:
-        """
-        Найти запись TOC по ID дампа.
-        :param dump_id: идентификатор записи в дампе
-        :return: запись TOC или None
-        """
-        return next((entry for entry in self.toc_entries if entry.dump_id == dump_id), None)
 
 
 class DataParser(metaclass=ABCMeta):
