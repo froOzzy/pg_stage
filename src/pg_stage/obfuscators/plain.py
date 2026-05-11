@@ -2,7 +2,7 @@ import json
 import re
 import sys
 from collections import defaultdict
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
@@ -13,9 +13,9 @@ from pg_stage.utils import get_mutation_func, run_mutation
 class PlainObfuscator:
     """Главный класс для работы с обфускатором в формате plain"""
 
-    copy_parse_pattern = r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;'
-    comment_table_parse_pattern = r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;'
-    comment_column_parse_pattern = r'COMMENT ON COLUMN ([\d\w\_\.]+) IS \'anon: ([\w\W]*)\'\;'
+    copy_parse_pattern = re.compile(r'COPY ([\d\w\_\.]+) \(([\w\W]+)\) FROM stdin;')
+    comment_table_parse_pattern = re.compile(r'COMMENT ON TABLE ([\d\w\_\.]*) IS \'anon: ([\w\W]*)\'\;')
+    comment_column_parse_pattern = re.compile(r'COMMENT ON COLUMN ([\d\w\_\.]+) IS \'anon: ([\w\W]*)\'\;')
 
     def __init__(
         self,
@@ -42,6 +42,7 @@ class PlainObfuscator:
         self._enumerate_table_columns: Dict[str, int] = {}
         self._delete_tables: Set[str] = set()
         self._is_delete: bool = False
+        self._sorted_columns: list[str] = []
 
     def _prepare_variables(self, *, line: str) -> Optional[str]:
         """
@@ -54,6 +55,7 @@ class PlainObfuscator:
         self._table_columns = []
         self._enumerate_table_columns = {}
         self._is_delete = False
+        self._sorted_columns = []
         return line
 
     def _checking_conditions(self, *, conditions: ConditionTypeMany, table_values: List[str]) -> bool:
@@ -99,7 +101,7 @@ class PlainObfuscator:
         :param line: строка sql
         :return: строка sql
         """
-        result = re.search(pattern=self.comment_column_parse_pattern, string=line)
+        result = self.comment_column_parse_pattern.search(string=line)
         if not result:
             return line
 
@@ -136,7 +138,7 @@ class PlainObfuscator:
         :param line: строка sql
         :return: строка sql
         """
-        result = re.search(pattern=self.comment_table_parse_pattern, string=line)
+        result = self.comment_table_parse_pattern.search(string=line)
         if not result:
             return line
 
@@ -151,7 +153,7 @@ class PlainObfuscator:
 
         return line
 
-    def _sort_columns_by_source_column_exists(self, table_mutations_by_column: dict) -> list:
+    def _sort_columns_by_source_column_exists(self, *, table_mutations_by_column: dict[str, Any]) -> list[str]:
         """
         Метод для сортировки столбцов на основе наличия параметра `source_column` в аргументах мутации.
         :return: Список с верным порядком прохождения столбцов
@@ -178,11 +180,9 @@ class PlainObfuscator:
         if not table_mutations_by_column:
             return line
 
-        sorted_columns = self._sort_columns_by_source_column_exists(table_mutations_by_column)
-
         obfuscated_values = {}
         table_values = line.split(self.delimiter)
-        for column_name in sorted_columns:
+        for column_name in self._sorted_columns:
             column_index = self._enumerate_table_columns[column_name]
             mutations_for_column = table_mutations_by_column.get(column_name)
             if not mutations_for_column:
@@ -272,7 +272,7 @@ class PlainObfuscator:
         :param line: строка sql
         :return: строка sql
         """
-        result = re.search(pattern=self.copy_parse_pattern, string=line)
+        result = self.copy_parse_pattern.search(string=line)
         if not result:
             return None
 
@@ -293,6 +293,10 @@ class PlainObfuscator:
             re.search(pattern, self._table_name) for pattern in self.delete_tables_by_pattern
         )
         self._is_data = True
+        self._sorted_columns = self._sort_columns_by_source_column_exists(
+            table_mutations_by_column=self._map_tables.get(self._table_name, {}),
+        )
+
         return line
 
     def _parse_line(self, *, line: str) -> Optional[str]:
@@ -301,10 +305,9 @@ class PlainObfuscator:
         :param line: строка sql
         :return: обработанная строка sql
         """
-        if line.startswith('\\.'):
-            return self._prepare_variables(line=line)
-
         if self._is_data:
+            if line.startswith('\\.'):
+                return self._prepare_variables(line=line)
             return self._prepared_data(line=line)
 
         if line.startswith('COMMENT ON COLUMN'):
@@ -328,5 +331,5 @@ class PlainObfuscator:
 
         for line in stdin:
             new_line = self._parse_line(line=line.rstrip('\n'))
-            if isinstance(new_line, str):
+            if new_line is not None:
                 sys.stdout.write(new_line + '\n')
