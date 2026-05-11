@@ -153,7 +153,7 @@ class PlainObfuscator:
 
         return line
 
-    def _sort_columns_by_source_column_exists(self, *, table_mutations_by_column: dict[str, Any]) -> list[str]:
+    def _sort_columns_by_source_column_exists(self, *, table_mutations_by_column: dict) -> list[str]:
         """
         Метод для сортировки столбцов на основе наличия параметра `source_column` в аргументах мутации.
         :return: Список с верным порядком прохождения столбцов
