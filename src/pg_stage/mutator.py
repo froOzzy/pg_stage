@@ -64,6 +64,7 @@ class Mutator:
         self._now = datetime.datetime.now()
         self._today = self._now.date()
         self._unique_values = set()  # type: ignore
+        self._deterministic_rng: Optional[random.Random] = None
 
         if secret_key and secret_key_nonce:
             seed = hmac.new(
@@ -72,8 +73,6 @@ class Mutator:
                 digestmod=hashlib.sha256,
             ).digest()
             self._deterministic_rng = random.Random(int.from_bytes(seed, byteorder='big'))
-        else:
-            self._deterministic_rng = None
 
     def clear_unique_values(self) -> None:
         """Метод для сброса уникальных значений."""
