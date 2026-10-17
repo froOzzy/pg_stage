@@ -1,4 +1,4 @@
--- Source data for the single PG15 plain snapshot. Regenerate with tools.generate_fixtures.
+-- Source data for the single PG15 plain snapshot. Regenerate with tests.tools.generate_fixtures.
 
 -- Scenario: test_by_pattern_condition
 CREATE SCHEMA test_by_pattern_condition;

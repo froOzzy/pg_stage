@@ -1,13 +1,13 @@
-"""Перегенерировать реальные дампы из SQL-источников: python -m tools.generate_fixtures."""
+"""Перегенерировать реальные дампы из SQL-источников: python -m tests.tools.generate_fixtures."""
 
 import argparse
 import re
 import tempfile
 from pathlib import Path
 
-from tools.postgres import postgres_cluster, run_postgres
+from tests.tools.postgres import postgres_cluster, run_postgres
 
-FIXTURES = Path(__file__).resolve().parents[1] / 'tests'
+FIXTURES = Path(__file__).resolve().parents[1]
 
 
 def generate(dump_format: str, expected_major: int) -> None:

@@ -58,4 +58,13 @@ ruff = "0.16.8"
 mypy = "1.4.1"
 
 [tool.bandit]
-exclude_dirs = ["tests", ".venv"]
+# Инструменты tests/tools проверяются; pytest-проверки и их helpers исключены.
+exclude_dirs = [
+    ".venv",
+    "tests/custom",
+    "tests/plain",
+    "tests/load",
+    "tests/conftest.py",
+    "tests/helpers.py",
+    "*/test_*.py",
+]

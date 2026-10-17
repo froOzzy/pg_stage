@@ -64,7 +64,7 @@ DDL, комментариями, COPY-значениями и отдельным
 `tests/sql/` и Python-конструктор сценариев удалены: больше нет автоматического
 дополнения пропущенных полей NULL или скрытого преобразования имён.
 
-Общий инструмент `tools/generate_fixtures.py` создаёт временный кластер без TCP,
+Общий инструмент `tests/tools/generate_fixtures.py` создаёт временный кластер без TCP,
 загружает source.sql и запускает `pg_dump -Fp`. Новый дамп сначала восстанавливается
 в пустую базу; только после успеха он атомарно заменяет сохранённый snapshot.
 При ошибке генерации или проверки прежний файл остаётся нетронутым.
@@ -84,7 +84,7 @@ nix-shell --run 'python -m pytest --require-postgres -q'
 Из корня проекта на NixOS:
 
 ```bash
-nix-shell -p postgresql_15 --run '.venv/bin/python -m tools.generate_fixtures --format plain --expected-major 15'
+nix-shell -p postgresql_15 --run '.venv/bin/python -m tests.tools.generate_fixtures --format plain --expected-major 15'
 ```
 
 Перед генерацией проверяется версия pg_dump: ожидается 15.

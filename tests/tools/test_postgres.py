@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from tools.postgres import run_postgres
+from tests.tools.postgres import run_postgres
 
 
 def test_unknown_executable_is_rejected():

@@ -4,7 +4,7 @@ import shutil
 
 import pytest
 
-from tools.postgres import postgres_cluster
+from tests.tools.postgres import postgres_cluster
 
 pytest_plugins = ['tests.load.plugin']
 
