@@ -2,7 +2,7 @@ import json
 import re
 import sys
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
@@ -43,6 +43,8 @@ class PlainObfuscator:
         self._delete_tables: Set[str] = set()
         self._is_delete: bool = False
         self._sorted_columns: list[str] = []
+        self._column_plan: List[Tuple[str, int, MapTablesValueTypeMany]] = []
+        self._needs_column_context = False
 
     def _prepare_variables(self, *, line: str) -> Optional[str]:
         """
@@ -56,6 +58,8 @@ class PlainObfuscator:
         self._enumerate_table_columns = {}
         self._is_delete = False
         self._sorted_columns = []
+        self._column_plan = []
+        self._needs_column_context = False
         return line
 
     def _checking_conditions(self, *, conditions: ConditionTypeMany, table_values: List[str]) -> bool:
@@ -180,13 +184,14 @@ class PlainObfuscator:
         if not table_mutations_by_column:
             return line
 
-        obfuscated_values = {}
+        obfuscated_values: Optional[Dict[str, str]] = {} if self._needs_column_context else None
         table_values = line.split(self.delimiter)
-        for column_name in self._sorted_columns:
-            column_index = self._enumerate_table_columns[column_name]
-            mutations_for_column = table_mutations_by_column.get(column_name)
+        # Условия и ключи relations должны читать исходные значения строки.
+        result_values = table_values.copy()
+        for column_name, column_index, mutations_for_column in self._column_plan:
             if not mutations_for_column:
-                obfuscated_values[column_name] = table_values[column_index]
+                if obfuscated_values is not None:
+                    obfuscated_values[column_name] = table_values[column_index]
                 continue
 
             is_obfuscated = False
@@ -202,7 +207,6 @@ class PlainObfuscator:
 
                 if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
                     if mutation_index + 1 == len_mutations_for_column:
-                        obfuscated_values[column_name] = table_values[column_index]
                         break
 
                     continue
@@ -213,7 +217,7 @@ class PlainObfuscator:
 
                 if not mutation_relations:
                     is_obfuscated = True
-                    obfuscated_values[column_name] = run_mutation(
+                    result_values[column_index] = run_mutation(
                         mutation_owner=self._mutator,
                         mutation_name=mutation_name,
                         mutation_kwargs=mutation_kwargs,
@@ -257,14 +261,13 @@ class PlainObfuscator:
 
                     self._relation_values[relation_fk] = new_value
 
-                obfuscated_values[column_name] = new_value
+                result_values[column_index] = new_value
                 is_obfuscated = True
 
-        sorted_result: list[str] = []
-        for column_name, _ in self._enumerate_table_columns.items():
-            sorted_result.append(obfuscated_values[column_name])
+            if obfuscated_values is not None:
+                obfuscated_values[column_name] = result_values[column_index]
 
-        return self.delimiter.join(sorted_result)
+        return self.delimiter.join(result_values)
 
     def _parse_copy_values(self, *, line: str) -> Optional[str]:
         """
@@ -296,6 +299,17 @@ class PlainObfuscator:
         self._sorted_columns = self._sort_columns_by_source_column_exists(
             table_mutations_by_column=self._map_tables.get(self._table_name, {}),
         )
+        table_mutations = self._map_tables.get(self._table_name, {})
+        self._needs_column_context = any(
+            'source_column' in mutation['mutation_kwargs']
+            for column_name in self._sorted_columns
+            for mutation in table_mutations.get(column_name, [])
+        )
+        self._column_plan = [
+            (column_name, self._enumerate_table_columns[column_name], table_mutations.get(column_name, []))
+            for column_name in self._sorted_columns
+            if self._needs_column_context or table_mutations.get(column_name)
+        ]
 
         return line
 
