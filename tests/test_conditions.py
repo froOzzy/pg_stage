@@ -1,11 +1,11 @@
-from src.pg_stage.obfuscators.plain import PlainObfuscator
-from tests.plain.helpers import copy_rows, obfuscate
+from pg_stage.obfuscators.plain import PlainObfuscator
+from tests.helpers import copy_rows, obfuscate
 
 
 def test_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
-    Act: Вызов функции `_parse_line` класса Obfuscator
+    Act: Обработка сценария через PlainObfuscator.run
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
     case = 'test_equal_condition'
@@ -24,7 +24,7 @@ def test_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None
 def test_not_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
-    Act: Вызов функции `_parse_line` класса Obfuscator
+    Act: Обработка сценария через PlainObfuscator.run
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
     case = 'test_not_equal_condition'
@@ -43,7 +43,7 @@ def test_not_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> 
 def test_by_pattern_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
-    Act: Вызов функции `_parse_line` класса Obfuscator
+    Act: Обработка сценария через PlainObfuscator.run
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
     case = 'test_by_pattern_condition'

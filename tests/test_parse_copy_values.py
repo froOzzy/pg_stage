@@ -1,10 +1,11 @@
 import pytest
 
-from src.pg_stage.obfuscators.plain import PlainObfuscator
+from pg_stage.obfuscators.plain import PlainObfuscator
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def obfuscator_object_with_delete_tables_by_pattern() -> PlainObfuscator:
+    """Создать обфускатор с шаблоном удаления для проверки состояния COPY."""
     return PlainObfuscator(delete_tables_by_pattern=[r'_table', r'schema\.\_table'])
 
 
@@ -34,9 +35,9 @@ def test_parse_copy_values_without_delete_comment(
     plain_dump,
 ) -> None:
     """
-    Arrange: Строка копирования данных в таблицу, которую необходимо удалить
+    Arrange: Строка COPY таблицы без комментария об удалении
     Act: Вызов функции `_parse_line` класса Obfuscator
-    Assert: Флаг _is_delete активен
+    Assert: Флаг _is_delete не активен, режим данных включён
     """
     obfuscator_object._parse_line(
         line=plain_dump.statement('metadata', f'COPY {table_name} '),
@@ -46,7 +47,7 @@ def test_parse_copy_values_without_delete_comment(
 
 
 @pytest.mark.parametrize('table_name', ['metadata._table', 'metadata__schema._table'])
-def test_parse_copy_values_without_delete_tables_by_pattern(
+def test_parse_copy_values_with_delete_tables_by_pattern(
     obfuscator_object_with_delete_tables_by_pattern: PlainObfuscator,
     table_name: str,
     plain_dump,
@@ -72,7 +73,6 @@ def test_parse_copy_values_without_delete_tables_by_pattern_and_not_found_table(
 ) -> None:
     """
     Arrange: Строка копирования данных в таблицу, которая не должна быть удалена, т.к. не входит в список
-    delete_tables_by_pattern
     delete_tables_by_pattern
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: Флаг _is_delete не активен

@@ -1,13 +1,13 @@
 { pkgs ? import <nixpkgs> {} }:
 
 pkgs.mkShell {
-  packages = [ pkgs.python311 ];
+  packages = [ pkgs.python311 pkgs.ruff pkgs.postgresql_18 ];
 
   shellHook = ''
     if [ ! -d .venv ]; then
       ${pkgs.python311}/bin/python3 -m venv .venv
       .venv/bin/python -m pip install -e . \
-        pytest==7.3.1 bandit==1.7.5 ruff==0.11.8 mypy==1.4.1
+        pytest==7.3.1 bandit==1.7.5 mypy==1.4.1
     fi
 
     if [ ! -x .venv/bin/python ]; then
@@ -15,6 +15,8 @@ pkgs.mkShell {
       return 1
     fi
 
+    # Старый pip wheel Ruff на NixOS не запускается; используем пакет из Nix.
+    ln -sfn ${pkgs.ruff}/bin/ruff .venv/bin/ruff
     source .venv/bin/activate
   '';
 }

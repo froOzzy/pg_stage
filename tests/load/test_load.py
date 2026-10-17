@@ -40,18 +40,9 @@ def test_plain_dump_under_load(request, load_results, scenario, output_mode):
         ]
         if config.getoption('--load-tmp-dir'):
             command.extend(['--tmp-dir', config.getoption('--load-tmp-dir')])
-        process = subprocess.run(
-            command,
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=config.getoption('--load-timeout'),
-            env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONHASHSEED': '0'},
+        result = run_worker(
+            command, config.getoption('--load-timeout'), load_results, scenario, output_mode, repetition + 1
         )
-        assert process.returncode == 0, process.stderr
-        result = json.loads(process.stdout)
-        result['repetition'] = repetition + 1
-        load_results.append(result)
         runs.append(result)
         assert result['rows'] == config.getoption('--load-rows') * (2 if scenario == 'relations' else 1)
         assert result['wall_seconds'] > 0
@@ -70,3 +61,60 @@ def test_plain_dump_under_load(request, load_results, scenario, output_mode):
         assert max(run['io']['write_bytes'] for run in runs) / 1024**2 <= max_write, (
             'Storage writes above configured limit'
         )
+
+
+def run_worker(command, timeout, results, scenario, output_mode, repetition):
+    """Запустить worker и сохранить контекст сбоя в отчёте до завершения теста."""
+    record = {'scenario': scenario, 'output_mode': output_mode, 'repetition': repetition, 'status': 'failed'}
+    results.append(record)
+    try:
+        process = subprocess.run(
+            command,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONHASHSEED': '0'},
+        )
+    except subprocess.TimeoutExpired as error:
+        record.update(error=f'Worker timed out after {timeout}s', stderr=str(error.stderr or ''))
+        pytest.fail(record['error'])
+    record.update(returncode=process.returncode, stderr=process.stderr, stdout=process.stdout)
+    assert process.returncode == 0, process.stderr
+    try:
+        result = json.loads(process.stdout)
+    except json.JSONDecodeError:
+        record['error'] = 'Invalid worker JSON'
+        raise
+    record.update(result, status='passed')
+    record.pop('stdout')
+    return record
+
+
+@pytest.mark.load
+@pytest.mark.parametrize('scenario', ['wide', 'json'])
+def test_streaming_memory_growth_is_bounded(request, load_results, scenario):
+    """
+    Arrange: Два свежих процесса с 2000 и 50000 строк без кэша relations
+    Act: Обработка широкого или JSON-дампа без записи результата на диск
+    Assert: Увеличение потока в 25 раз не увеличивает пиковый RSS более чем на 24 MiB
+    """
+    peaks = []
+    for rows in (2000, 50000):
+        command = [
+            sys.executable,
+            '-m',
+            'tests.load.worker',
+            '--scenario',
+            scenario,
+            '--rows',
+            str(rows),
+            '--output-mode',
+            'discard',
+        ]
+        result = run_worker(
+            command, request.config.getoption('--load-timeout'), load_results, scenario, 'discard', len(peaks) + 1
+        )
+        result['measurement'] = 'memory_scaling'
+        peaks.append(result['peak_rss_mib'])
+    assert peaks[1] - peaks[0] <= 24, f'Streaming RSS grows with input: {peaks}'

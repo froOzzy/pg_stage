@@ -15,6 +15,7 @@ from pg_stage.obfuscators.custom import CustomObfuscator, DumpIO, DumpProcessor,
 from pg_stage.obfuscators.plain import PlainObfuscator
 from tests.custom import ARCHIVE_VERSIONS
 from tests.custom.helpers import pack_chunks, pack_int, read_block
+from tests.helpers import copy_rows
 
 
 @pytest.mark.parametrize('compression', [0, 6])
@@ -115,20 +116,6 @@ def test_archive_switches_table_context(custom_fixtures: Path) -> None:
     assert output.read() == b''
 
 
-def table_rows(sql: str) -> dict[str, list[str]]:
-    tables = {}
-    current = None
-    for line in sql.splitlines():
-        if line.startswith('COPY '):
-            current = line.split()[1]
-            tables[current] = []
-        elif line == '\\.':
-            current = None
-        elif current is not None:
-            tables[current].append(line)
-    return tables
-
-
 @pytest.mark.parametrize('compression', [0, 6])
 @pytest.mark.parametrize('pg_major', ARCHIVE_VERSIONS)
 def test_real_fixture_is_readable(custom_fixtures: Path, pg_restore: str, compression: int, pg_major: int) -> None:
@@ -145,7 +132,7 @@ def test_real_fixture_is_readable(custom_fixtures: Path, pg_restore: str, compre
         ],
         text=True,
     )
-    tables = table_rows(sql)
+    tables = copy_rows(sql)
     assert len(tables) == 5
     assert tables['public.deleted'] == ['1\tprivate']
     assert len(tables['public.users']) == 2
@@ -153,6 +140,7 @@ def test_real_fixture_is_readable(custom_fixtures: Path, pg_restore: str, compre
 
 
 def restore_case(pg_major: int, compression: int):
+    """Пометить воспроизводимый дефект конкретной версии и сжатия строгим xfail."""
     if pg_major >= 17:
         error = PgDumpError
         reason = 'Сквозной путь блокируется несовместимостью TOC 1.16'
@@ -194,6 +182,10 @@ def test_uncompressed_mutations_match_plain(custom_fixtures: Path, pg_restore: s
 
 
 def restored_tables(custom_fixtures: Path, pg_restore: str, pg_major: int, compression: int):
+    """Обфусцировать реальный архив и вернуть пары custom/plain COPY-данных.
+
+    pg_restore здесь извлекает SQL; восстановление в сервер проверяется отдельно.
+    """
     original = (custom_fixtures / f'postgres{pg_major}-z{compression}.dump').read_bytes()
     restored = subprocess.run([pg_restore, '--file=-'], input=original, capture_output=True, check=True).stdout.decode(
         'utf-8'
@@ -210,7 +202,7 @@ def restored_tables(custom_fixtures: Path, pg_restore: str, pg_major: int, compr
         capture_output=True,
         check=True,
     ).stdout.decode('utf-8')
-    return table_rows(result), table_rows(expected.getvalue())
+    return copy_rows(result), copy_rows(expected.getvalue())
 
 
 def test_invalid_archive_header_raises() -> None:

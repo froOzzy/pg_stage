@@ -42,7 +42,13 @@ def run_mutation(
     mutation_func: Optional[Callable[..., Any]] = None,
 ) -> Any:
     """
-    Метод для выполнения мутации с безопасным merge runtime-контекста.
+    Выполнить мутацию с контекстом строки, сохранив исходные параметры.
+
+    Аргументы копируются поверхностно: явно заданные current_value и
+    obfuscated_values имеют приоритет над runtime-контекстом. Если передана
+    mutation_func, поиск по имени не выполняется; вызывающий код отвечает
+    за соответствие подготовленной функции текущему Mutator и конфигурации.
+
     :param mutation_owner: объект, содержащий методы mutation_<name>
     :param mutation_name: название мутации (без префикса 'mutation_')
     :param mutation_kwargs: параметры мутации, опционально

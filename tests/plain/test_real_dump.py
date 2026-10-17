@@ -1,10 +1,11 @@
 import pytest
 
 from pg_stage.obfuscators.plain import PlainObfuscator
-from tests.plain.helpers import copy_rows, obfuscate
+from tests.helpers import copy_rows, obfuscate
 
 
 def sql_structure(sql: str) -> list[str]:
+    """Извлечь весь SQL вне строк COPY для проверки сохранности структуры дампа."""
     lines = []
     in_copy = False
     for line in sql.splitlines():

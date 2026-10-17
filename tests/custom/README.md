@@ -93,12 +93,19 @@ JSON, source_column и связей; удаление проверяется о�
 Скрипт проверяет версию `pg_dump`, чтобы не выдать новый архив за созданный старой версией:
 
 ```bash
-nix-shell -p postgresql_15 --run '.venv/bin/python tests/custom/generate_fixtures.py --expected-major 15'
-nix-shell -p postgresql_16 --run '.venv/bin/python tests/custom/generate_fixtures.py --expected-major 16'
-nix-shell -p postgresql_17 --run '.venv/bin/python tests/custom/generate_fixtures.py --expected-major 17'
-nix-shell -p postgresql_18 --run '.venv/bin/python tests/custom/generate_fixtures.py --expected-major 18'
+nix-shell -p postgresql_15 --run '.venv/bin/python -m tools.generate_fixtures --format custom --expected-major 15'
+nix-shell -p postgresql_16 --run '.venv/bin/python -m tools.generate_fixtures --format custom --expected-major 16'
+nix-shell -p postgresql_17 --run '.venv/bin/python -m tools.generate_fixtures --format custom --expected-major 17'
+nix-shell -p postgresql_18 --run '.venv/bin/python -m tools.generate_fixtures --format custom --expected-major 18'
 ```
 
 Скрипт создаёт временный кластер с искусственной БД, отключает TCP, использует
 Unix-сокет в уникальном временном каталоге и останавливает сервер в `finally`.
 Архивы могут отличаться побайтно из-за времени создания и служебных метаданных.
+
+Оба формата используют общий инструмент `tools/generate_fixtures.py` и жизненный
+цикл кластера из `tools/postgres.py`. Генерация custom проверяет восстановление
+обоих архивов в пустые базы перед заменой файлов; каждый файл заменяется атомарно.
+При ошибке генерации или проверки прежние архивы сохраняются.
+В CI PostgreSQL 18 устанавливается явно, а `--require-postgres` превращает
+отсутствие совместимого pg_restore в ошибку вместо skip.

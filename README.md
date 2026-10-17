@@ -58,7 +58,10 @@ You can see the current list [here](https://github.com/froOzzy/pg_stage/blob/mai
 ## Tests
 
 Run `python -m pytest` for the regular test suite. Plain-format tests use one real
-PostgreSQL 15 `pg_dump -Fp` fixture containing all scenarios and require no running database.
+PostgreSQL 15 `pg_dump -Fp` fixture containing all scenarios. Most tests run without a database;
+an additional integration test restores the obfuscated result in a temporary PostgreSQL cluster.
+Use `nix-shell --run 'python -m pytest --require-postgres'` on NixOS to require all integration checks.
+The shell provides Python, native Ruff and PostgreSQL 18.
 See [plain test scenarios and fixture regeneration](tests/plain/README.md).
 
 ## Load tests

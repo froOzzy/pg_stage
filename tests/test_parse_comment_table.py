@@ -1,6 +1,6 @@
 import pytest
 
-from src.pg_stage.obfuscators.plain import PlainObfuscator
+from pg_stage.obfuscators.plain import PlainObfuscator
 
 
 @pytest.mark.parametrize('table_name', ['metadata.deleted_table', 'metadata__schema.deleted_table'])

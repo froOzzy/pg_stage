@@ -1,8 +1,6 @@
-"""Чтение настоящих plain-дампов и выделение их COPY-данных для проверок."""
+"""Доступ к сценариям единого сохранённого plain-дампа."""
 
-import io
 import re
-from contextlib import redirect_stdout
 from pathlib import Path
 
 FIXTURES = Path(__file__).resolve().parent / 'fixtures'
@@ -14,45 +12,31 @@ SECTION = re.compile(
 
 
 def schema_name(case: str, original: str = 'public') -> str:
+    """Получить схему сценария; исходная непубличная схема добавляется после двойного подчёркивания."""
     return case.replace('-', '_') + (f'__{original}' if original != 'public' else '')
 
 
 def qualified_table(case: str, table: str) -> str:
+    """Преобразовать исходное имя таблицы в квалифицированное имя внутри сценария."""
     schema, _, name = qualified(table).rpartition('.')
     return f'{schema_name(case, schema)}.{name}'
 
 
 def qualified(table: str) -> str:
+    """Добавить public к имени без схемы; входные имена должны быть простыми SQL-идентификаторами."""
     return table if '.' in table else f'public.{table}'
 
 
-def copy_rows(sql: str) -> dict[str, list[str]]:
-    tables = {}
-    table = None
-    for line in sql.splitlines():
-        if line.startswith('COPY '):
-            table = line.split()[1]
-            assert table not in tables, f'Duplicate COPY for {table}'
-            tables[table] = []
-        elif line == '\\.':
-            assert table is not None, 'Unexpected COPY terminator'
-            table = None
-        elif table is not None:
-            tables[table].append(line)
-    assert table is None, 'Unterminated COPY block'
-    return tables
-
-
-def obfuscate(parser, sql: str) -> str:
-    output = io.StringIO()
-    with redirect_stdout(output):
-        parser.run(stdin=io.StringIO(sql))
-    return output.getvalue()
-
-
 class PlainDump:
+    """Доступ к сценариям единственного PG15 snapshot без изменения SQL.
+
+    Сценарии изолированы схемами; методы принимают явный идентификатор сценария,
+    не имя тестовой функции. Негативные сценарии нельзя обфусцировать все вместе.
+    """
+
     @staticmethod
     def table(case: str, table: str) -> str:
+        """Вернуть фактическое имя таблицы для assertions выбранного сценария."""
         return qualified_table(case, table)
 
     def read(self, case: str) -> str:
@@ -73,6 +57,7 @@ class PlainDump:
         return body[: sections[0].start()] + ''.join(selected) + delimiter + footer
 
     def statement(self, case: str, prefix: str) -> str:
+        """Найти единственную SQL-строку с префиксом; неоднозначность вызывает AssertionError."""
         matches = [line for line in self.read(case).splitlines() if line.startswith(prefix)]
         assert len(matches) == 1, f'Expected exactly one statement: {prefix}'
         return matches[0]

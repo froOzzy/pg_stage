@@ -13,6 +13,7 @@ def test_parser_handles_chunk_and_utf8_boundaries(chunk_size: int) -> None:
     seen = []
 
     def parse(*, line: str) -> str:
+        """Передать строку тестовому обработчику для проверки контракта адаптера."""
         seen.append(line)
         return line.upper()
 

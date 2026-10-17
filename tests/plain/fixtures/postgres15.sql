@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict n7kOMlXvUqi52YU8qVCI2kNObqI46WZ8l4UACutfWDpdFKP4ecUGausPwejsNy5
+\restrict FuFYknFjhAUDOxdayPtHUcYg2tHekFo221vXukWwgQICxnAFNOjyE1DTezIjkGJ
 
 -- Dumped from database version 15.19
 -- Dumped by pg_dump version 15.19
@@ -96,17 +96,17 @@ CREATE SCHEMA json_invalid_json_raises;
 
 
 --
--- Name: json_json_array_raises; Type: SCHEMA; Schema: -; Owner: -
+-- Name: json_json_array_passthrough; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA json_json_array_raises;
+CREATE SCHEMA json_json_array_passthrough;
 
 
 --
--- Name: json_json_scalar_raises; Type: SCHEMA; Schema: -; Owner: -
+-- Name: json_json_scalar_passthrough; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA json_json_scalar_raises;
+CREATE SCHEMA json_json_scalar_passthrough;
 
 
 --
@@ -333,6 +333,13 @@ CREATE SCHEMA test_two_mutation_for_one_column;
 CREATE SCHEMA test_two_mutation_for_one_column__schema;
 
 
+--
+-- Name: typed_restore; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA typed_restore;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -529,37 +536,37 @@ COMMENT ON COLUMN json_invalid_json_raises.json_values.details IS 'anon: [{"muta
 
 
 --
--- Name: json_values; Type: TABLE; Schema: json_json_array_raises; Owner: -
+-- Name: json_values; Type: TABLE; Schema: json_json_array_passthrough; Owner: -
 --
 
-CREATE TABLE json_json_array_raises.json_values (
+CREATE TABLE json_json_array_passthrough.json_values (
     id text,
     details text
 );
 
 
 --
--- Name: COLUMN json_values.details; Type: COMMENT; Schema: json_json_array_raises; Owner: -
+-- Name: COLUMN json_values.details; Type: COMMENT; Schema: json_json_array_passthrough; Owner: -
 --
 
-COMMENT ON COLUMN json_json_array_raises.json_values.details IS 'anon: [{"mutation_name": "json_update", "mutation_kwargs": {"mutations_by_key": {"name": [{"mutation_name": "first_name", "mutation_kwargs": {}}]}}}]';
+COMMENT ON COLUMN json_json_array_passthrough.json_values.details IS 'anon: [{"mutation_name": "json_update", "mutation_kwargs": {"mutations_by_key": {"name": [{"mutation_name": "first_name", "mutation_kwargs": {}}]}}}]';
 
 
 --
--- Name: json_values; Type: TABLE; Schema: json_json_scalar_raises; Owner: -
+-- Name: json_values; Type: TABLE; Schema: json_json_scalar_passthrough; Owner: -
 --
 
-CREATE TABLE json_json_scalar_raises.json_values (
+CREATE TABLE json_json_scalar_passthrough.json_values (
     id text,
     details text
 );
 
 
 --
--- Name: COLUMN json_values.details; Type: COMMENT; Schema: json_json_scalar_raises; Owner: -
+-- Name: COLUMN json_values.details; Type: COMMENT; Schema: json_json_scalar_passthrough; Owner: -
 --
 
-COMMENT ON COLUMN json_json_scalar_raises.json_values.details IS 'anon: [{"mutation_name": "json_update", "mutation_kwargs": {"mutations_by_key": {"name": [{"mutation_name": "first_name", "mutation_kwargs": {}}]}}}]';
+COMMENT ON COLUMN json_json_scalar_passthrough.json_values.details IS 'anon: [{"mutation_name": "json_update", "mutation_kwargs": {"mutations_by_key": {"name": [{"mutation_name": "first_name", "mutation_kwargs": {}}]}}}]';
 
 
 --
@@ -1335,6 +1342,61 @@ COMMENT ON COLUMN test_two_mutation_for_one_column.table_1.username IS 'anon: [{
 
 
 --
+-- Name: orders; Type: TABLE; Schema: typed_restore; Owner: -
+--
+
+CREATE TABLE typed_restore.orders (
+    id integer NOT NULL,
+    user_id uuid NOT NULL,
+    amount numeric(10,2) NOT NULL,
+    CONSTRAINT orders_amount_check CHECK ((amount > (0)::numeric))
+);
+
+
+--
+-- Name: users; Type: TABLE; Schema: typed_restore; Owner: -
+--
+
+CREATE TABLE typed_restore.users (
+    id uuid NOT NULL,
+    email text NOT NULL,
+    birthday date NOT NULL,
+    details jsonb NOT NULL,
+    salt text,
+    CONSTRAINT users_details_check CHECK ((details ? 'secret'::text)),
+    CONSTRAINT users_email_check CHECK ((POSITION(('@'::text) IN (email)) > 1))
+);
+
+
+--
+-- Name: COLUMN users.email; Type: COMMENT; Schema: typed_restore; Owner: -
+--
+
+COMMENT ON COLUMN typed_restore.users.email IS 'anon: [{"mutation_name":"email"}]';
+
+
+--
+-- Name: COLUMN users.birthday; Type: COMMENT; Schema: typed_restore; Owner: -
+--
+
+COMMENT ON COLUMN typed_restore.users.birthday IS 'anon: [{"mutation_name":"date","mutation_kwargs":{"start":2000,"end":2024}}]';
+
+
+--
+-- Name: COLUMN users.details; Type: COMMENT; Schema: typed_restore; Owner: -
+--
+
+COMMENT ON COLUMN typed_restore.users.details IS 'anon: [{"mutation_name":"json_update","mutation_kwargs":{"mutations_by_key":{"secret":[{"mutation_name":"fixed_value","mutation_kwargs":{"value":"hidden"}}]}}}]';
+
+
+--
+-- Name: COLUMN users.salt; Type: COMMENT; Schema: typed_restore; Owner: -
+--
+
+COMMENT ON COLUMN typed_restore.users.salt IS 'anon: [{"mutation_name":"null"}]';
+
+
+--
 -- Data for Name: users; Type: TABLE DATA; Schema: context_0_0; Owner: -
 --
 
@@ -1438,19 +1500,19 @@ COPY json_invalid_json_raises.json_values (id, details) FROM stdin;
 
 
 --
--- Data for Name: json_values; Type: TABLE DATA; Schema: json_json_array_raises; Owner: -
+-- Data for Name: json_values; Type: TABLE DATA; Schema: json_json_array_passthrough; Owner: -
 --
 
-COPY json_json_array_raises.json_values (id, details) FROM stdin;
+COPY json_json_array_passthrough.json_values (id, details) FROM stdin;
 1	[1, 2, 3]
 \.
 
 
 --
--- Data for Name: json_values; Type: TABLE DATA; Schema: json_json_scalar_raises; Owner: -
+-- Data for Name: json_values; Type: TABLE DATA; Schema: json_json_scalar_passthrough; Owner: -
 --
 
-COPY json_json_scalar_raises.json_values (id, details) FROM stdin;
+COPY json_json_scalar_passthrough.json_values (id, details) FROM stdin;
 1	42
 \.
 
@@ -1800,11 +1862,11 @@ abe9fd39-f0b3-4ec6-9006-9783fbdade07	400$8$50$ef1eb813f8d8b99d$2932a9dc75d10f135
 --
 
 COPY test_parse_copy_values_with_mutation__schema.table_1 (id, email, crypted_password, dt_birthday, password_salt) FROM stdin;
-07750c56-fb37-46e1-b7b6-da530704c056	cj@example.com	400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3255d3bd1edd18ffc4a8092e2616b9e5ca7954b2c52504	1996-10-02	\N
-d489bda7-3212-4026-aef9-879d3242ad0c	leo@example.com	400$8$50$5555852e67bf920f$161b41afd99159609151f22fbc4efdccb925244606a87fc635954a71e8f7606f	1996-10-03	\N
-ab344f75-d78a-47ba-a4f7-121275b3b241	donna@example.com	400$8$4a$fb1a833f95079502$8b6ddd327381860e18bce53ee1a3249d5237de4f4344c06ad940ba8cfc6a2259	2005-01-02	\N
-f7bd4a7f-b63f-41c3-83bd-9683f33bb4b3	charlie@example.com	400$8$50$8368e20d878ef1b1$b271e3af024b424b7256592439a35d6eb224b4dc769ac9f2fa564b282efb8a47	2005-10-02	\N
-abe9fd39-f0b3-4ec6-9006-9783fbdade07	fun@example.com	400$8$50$ef1eb813f8d8b99d$2932a9dc75d10f13525e43c29726061d99b4ebdff2e9f9951eb6e2393f36d221	2022-12-31	\N
+07750c56-fb37-46e1-b7b6-da530704c056	cj@example.com	400$8$4c$c11df6facaefc6bc$93a657fb3c6e4cd1fd3255d3bd1edd18ffc4a8092e2616b9e5ca7954b2c52504	1996-10-02	v8BMktHnOeokEBTy6As
+d489bda7-3212-4026-aef9-879d3242ad0c	leo@example.com	400$8$50$5555852e67bf920f$161b41afd99159609151f22fbc4efdccb925244606a87fc635954a71e8f7606f	1996-10-03	c5d6v3NS97D3wYkUltFQ
+ab344f75-d78a-47ba-a4f7-121275b3b241	donna@example.com	400$8$4a$fb1a833f95079502$8b6ddd327381860e18bce53ee1a3249d5237de4f4344c06ad940ba8cfc6a2259	2005-01-02	2IcBeSh6IVVCJyZpqBt
+f7bd4a7f-b63f-41c3-83bd-9683f33bb4b3	charlie@example.com	400$8$50$8368e20d878ef1b1$b271e3af024b424b7256592439a35d6eb224b4dc769ac9f2fa564b282efb8a47	2005-10-02	QOqWQ24CMiRNuPUz8f5
+abe9fd39-f0b3-4ec6-9006-9783fbdade07	fun@example.com	400$8$50$ef1eb813f8d8b99d$2932a9dc75d10f13525e43c29726061d99b4ebdff2e9f9951eb6e2393f36d221	2022-12-31	uMYA6c3A7uGoI0aEbJ8R
 \.
 
 
@@ -1870,8 +1932,50 @@ COPY test_two_mutation_for_one_column.table_1 (id, username, last_name) FROM std
 
 
 --
+-- Data for Name: orders; Type: TABLE DATA; Schema: typed_restore; Owner: -
+--
+
+COPY typed_restore.orders (id, user_id, amount) FROM stdin;
+1	07750c56-fb37-46e1-b7b6-da530704c056	12.50
+\.
+
+
+--
+-- Data for Name: users; Type: TABLE DATA; Schema: typed_restore; Owner: -
+--
+
+COPY typed_restore.users (id, email, birthday, details, salt) FROM stdin;
+07750c56-fb37-46e1-b7b6-da530704c056	private@example.com	1990-01-01	{"secret": "private", "untouched": 42}	private-salt
+\.
+
+
+--
+-- Name: orders orders_pkey; Type: CONSTRAINT; Schema: typed_restore; Owner: -
+--
+
+ALTER TABLE ONLY typed_restore.orders
+    ADD CONSTRAINT orders_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: typed_restore; Owner: -
+--
+
+ALTER TABLE ONLY typed_restore.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: orders orders_user_id_fkey; Type: FK CONSTRAINT; Schema: typed_restore; Owner: -
+--
+
+ALTER TABLE ONLY typed_restore.orders
+    ADD CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES typed_restore.users(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict n7kOMlXvUqi52YU8qVCI2kNObqI46WZ8l4UACutfWDpdFKP4ecUGausPwejsNy5
+\unrestrict FuFYknFjhAUDOxdayPtHUcYg2tHekFo221vXukWwgQICxnAFNOjyE1DTezIjkGJ
 

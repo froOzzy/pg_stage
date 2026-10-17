@@ -46,7 +46,13 @@ MapTablesValueTypeMany = List[MapTablesValueType]
 
 
 class PreparedRelation(NamedTuple):
-    """Подготовленные ключи и индекс колонки для обработки связи."""
+    """Ключи и индекс одной связи, вычисленные при входе в COPY.
+
+    source_key и target_key имеют формат «таблица:мутируемая_колонка» и адресуют
+    кэш связей текущей и связанной таблиц. source_column/target_column — имена
+    колонок соединения, source_index — позиция source_column в исходной COPY-строке.
+    Индекс действителен только для порядка колонок, с которым подготовлена связь.
+    """
 
     target_key: str
     target_column: str
@@ -56,7 +62,13 @@ class PreparedRelation(NamedTuple):
 
 
 class PreparedMutation(NamedTuple):
-    """Конфигурация мутации с подготовленными связями и функцией обработки."""
+    """План одной мутации для текущего COPY без поиска функции на каждой строке.
+
+    config ссылается на исходную конфигурацию, которую обработчик не изменяет;
+    relations хранит подготовленные ключи и индексы, mutation_func — связанную
+    функцию текущего Mutator. Замена Mutator или конфигурации требует новой
+    подготовки плана. NamedTuple не делает вложенные словари и списки неизменяемыми.
+    """
 
     config: MapTablesValueType
     relations: List[PreparedRelation]

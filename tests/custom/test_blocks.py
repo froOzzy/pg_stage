@@ -12,6 +12,7 @@ from tests.custom.helpers import pack_chunks, unpack_block
 
 
 def scenario(name):
+    """Собрать синтетический plain-сценарий для сравнения с custom DATA-блоком."""
     mutation = {'mutation_name': 'random_choice', 'mutation_kwargs': {'choices': ['hidden']}}
     column = 'name'
     columns = 'token, id, name, status, details'
@@ -120,6 +121,7 @@ def test_compressed_json_matches_plain() -> None:
 
 
 def check_block_matches_plain(case: str, chunk_size: int, compression: CompressionMethod) -> None:
+    """Сравнить декодированные custom-данные с обработкой того же сценария plain-парсером."""
     comments, copy, rows, options = scenario(case)
     plain = PlainObfuscator(**options)
     expected = io.StringIO()
@@ -174,7 +176,7 @@ def test_uncompressed_related_columns(*, self_relation: bool) -> None:
     parser = PgStageParser(custom._parse_line)
 
     def process(copy, rows):
-        # Проверка DataBlockProcessor: метаданные блока устанавливаются отдельно от DumpProcessor.
+        """Обработать DATA-блок с заданным COPY-контекстом, отдельно от DumpProcessor."""
         custom._parse_copy_values(line=copy)
         output = io.BytesIO()
         DataBlockProcessor(DumpIO(), parser).process_block(
@@ -233,7 +235,10 @@ def test_compressed_block_is_complete() -> None:
     """
 
     class IdentityParser:
+        """Парсер без изменения данных для независимой проверки потоковых границ."""
+
         def parse(self, data):
+            """Вернуть входную строку без изменения для проверки блочного процессора."""
             return data
 
     payload = b'one\ntwo\nthree\n'

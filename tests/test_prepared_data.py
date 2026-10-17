@@ -3,8 +3,8 @@ from datetime import date
 
 import pytest
 
-from src.pg_stage.obfuscators.plain import PlainObfuscator
-from tests.plain.helpers import copy_rows, obfuscate
+from pg_stage.obfuscators.plain import PlainObfuscator
+from tests.helpers import copy_rows, obfuscate
 
 
 @pytest.mark.parametrize('configured_context', [False, True])
@@ -25,6 +25,7 @@ def test_mutation_context_is_fresh_for_each_row(
     received = []
 
     def mutate(**kwargs) -> str:
+        """Записать полученный контекст и вернуть предсказуемое значение для assertions."""
         received.append((kwargs['current_value'], dict(kwargs['obfuscated_values'])))
         return f'{kwargs["current_value"]}:{kwargs["obfuscated_values"]["name"]}'
 
@@ -50,7 +51,7 @@ def test_mutation_context_is_fresh_for_each_row(
 def test_conditions_use_original_values(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп с мутацией статуса и условной мутацией email на основе исходного статуса
-    Act: Вызов функции `_parse_line` для строк данных и перехода к таблице без мутаций
+    Act: Обработка полного сценария через PlainObfuscator.run
     Assert: Условия используют исходный статус, остальные поля и данные следующей таблицы сохранены
     """
     case = 'original_conditions'
@@ -72,7 +73,7 @@ def test_source_column_context_preserves_column_order(
 ) -> None:
     """
     Arrange: Дамп с UUID на основе колонки, расположенной после него, с мутацией источника или без неё
-    Act: Вызов функции `_parse_line` для строки данных
+    Act: Обработка полного сценария через PlainObfuscator.run
     Assert: UUID вычислен по итоговому значению источника, порядок колонок и остальные поля сохранены
     """
     case = f'source-{int(mutate_source)}'
@@ -85,7 +86,7 @@ def test_source_column_context_preserves_column_order(
 def test_parse_copy_values_with_delete_table(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, данные которых необходимо удалить
-    Act: Вызов функции `_parse_line` класса Obfuscator
+    Act: Обработка полного сценария через PlainObfuscator.run
     Assert: В stdout нет данных из таблицы
     """
     case = 'test_parse_copy_values_with_delete_tables'
@@ -103,7 +104,7 @@ def test_parse_copy_values_with_delete_table(obfuscator_object: PlainObfuscator,
 def test_parse_copy_values_with_mutation(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, в которых необходимо мутировать одно или несколько полей
-    Act: Вызов функции `_parse_line` класса Obfuscator
+    Act: Обработка полного сценария через PlainObfuscator.run
     Assert: В stdout данные полей мутированы
     """
     case = 'test_parse_copy_values_with_mutation'
@@ -141,7 +142,11 @@ def test_parse_copy_values_with_mutation(obfuscator_object: PlainObfuscator, pla
         'uMYA6c3A7uGoI0aEbJ8R',
     }
 
+    salt_table = plain_dump.table(case, 'schema.table_1')
+    original_salts = {row.split('\t')[-1] for row in copy_rows(dump_sql)[salt_table]}
+    assert original_salts == password_salts
     result = copy_rows(obfuscate(obfuscator_object, dump_sql))
+    assert all(row.split('\t')[-1] == '\\N' for row in result[salt_table])
     rows = [line for table in result.values() for line in table]
     assert len(rows) == 10
     for new_line in rows:
@@ -234,6 +239,7 @@ def test_relations_with_multiple_keys_and_different_column_order(
     generated = []
 
     def mutate(**kwargs: str) -> str:
+        """Сохранить сгенерированное значение для проверки повторного использования связи."""
         value = f'hidden-{kwargs["current_value"]}'
         generated.append(value)
         return value

@@ -180,8 +180,16 @@ class PlainObfuscator:
 
     def _prepared_data(self, *, line: str) -> Optional[str]:
         """
-        Метод для обработки данных.
-        :return: Новая строка с данными
+        Применить подготовленный план текущего COPY к одной строке данных.
+
+        Условия и ключи связей читают исходные значения. Результат собирается
+        отдельно в исходном порядке колонок; source_column получает контекст
+        уже обработанных колонок. Без source_column контекст не создаётся,
+        а план содержит только колонки с мутациями. Кэш relations сохраняется
+        между строками и таблицами; конфигурация мутаций не изменяется.
+
+        :param line: COPY-строка без завершающего перевода строки
+        :return: обработанная строка, исходная строка без мутаций или None при удалении
         """
         if self._is_delete:
             return None
@@ -279,7 +287,16 @@ class PlainObfuscator:
         return self.delimiter.join(result_values)
 
     def _prepare_mutation(self, *, column_name: str, mutation: MapTablesValueType) -> PreparedMutation:
-        """Подготовить функцию мутации, ключи и индексы связей для строк текущей таблицы."""
+        """Подготовить одну мутацию после разбора заголовка COPY.
+
+        :param column_name: имя мутируемой колонки текущей таблицы
+        :param mutation: исходная конфигурация; не копируется и не изменяется
+        :return: план с функцией текущего Mutator и индексами исходных колонок
+        :raises KeyError: колонка соединения отсутствует в заголовке COPY
+        :raises ValueError: имя мутации не зарегистрировано
+
+        Результат действителен до смены таблицы, порядка COPY-колонок или Mutator.
+        """
         source_key = f'{self._table_name}:{column_name}'
         return PreparedMutation(
             config=mutation,
@@ -298,9 +315,15 @@ class PlainObfuscator:
 
     def _parse_copy_values(self, *, line: str) -> Optional[str]:
         """
-        Метод для обработки строк с COPY.
-        :param line: строка sql
-        :return: строка sql
+        Открыть COPY-блок и один раз подготовить план обработки его строк.
+
+        Порядок колонок задаёт индексы плана и связей. При смене схемы
+        очищается кэш уникальных значений Mutator. Флаги удаления, необходимость
+        source_column-контекста и функции мутаций вычисляются до чтения данных.
+
+        :param line: заголовок COPY ... FROM stdin с простыми именами объектов
+        :return: исходный заголовок или None, если строка не распознана
+        :raises KeyError: в COPY отсутствует колонка соединения из relations
         """
         result = self.copy_parse_pattern.search(string=line)
         if not result:

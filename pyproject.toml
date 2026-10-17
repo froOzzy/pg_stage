@@ -9,9 +9,12 @@ line-length = 120
 target-version = "py39"
 
 [tool.ruff.lint]
-select = ["BLE", "FBT", "B", "A", "COM", "C4", "EM", "FIX", "I"]
+select = ["BLE", "FBT", "B", "A", "COM", "C4", "EM", "FIX", "I", "D101", "D102", "D103"]
 fixable = ["I"]
 ignore = ["COM812"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/**" = ["D101", "D102", "D103"]
 
 [tool.ruff.format]
 quote-style = "single"
@@ -50,7 +53,7 @@ typing-extensions = ">=4.5.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"
 bandit = "1.7.5"
-ruff = "0.11.8" 
+ruff = "0.16.8"
 mypy = "1.4.1"
 
 [tool.bandit]

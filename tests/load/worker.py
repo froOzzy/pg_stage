@@ -12,17 +12,24 @@ import time
 import uuid
 from contextlib import redirect_stdout
 from datetime import date
+from typing import Any, BinaryIO, Iterator, Optional
 
 from pg_stage.obfuscators.plain import PlainObfuscator
 from tests.load import SCENARIOS
 
 
-def proc_counters(path):
+def proc_counters(path: str) -> dict[str, int]:
+    """Прочитать целочисленные счётчики /proc; значения возвращаются в единицах ядра.
+
+    Для /proc/self/io rchar/wchar/read_bytes/write_bytes измеряются в байтах,
+    syscr/syscw — числом вызовов; это не процент занятости накопителя.
+    """
     with open(path) as stream:
         return {key: int(value.split()[0]) for key, value in (line.split(':', 1) for line in stream)}
 
 
-def memory_kib():
+def memory_kib() -> dict[str, int]:
+    """Вернуть текущий RSS и максимум RSS за жизнь процесса из /proc/self/status, в KiB."""
     values = {}
     with open('/proc/self/status') as stream:
         for line in stream:
@@ -32,17 +39,25 @@ def memory_kib():
 
 
 class DumpInput:
-    def __init__(self, scenario, rows):
+    """Лениво генерируемый plain-поток без хранения всех строк в памяти.
+
+    rows задаёт число строк на таблицу; relations содержит две таблицы.
+    bytes учитывает фактически прочитанные UTF-8 байты, width — число колонок.
+    """
+
+    def __init__(self, scenario: str, rows: int) -> None:
         self.scenario = scenario
         self.rows = rows
         self.bytes = 0
         self.width = 100 if scenario == 'wide' else 6
 
     @staticmethod
-    def comment(table, column, mutations):
+    def comment(table: str, column: str, mutations: list[dict[str, Any]]) -> str:
+        """Создать COMMENT с JSON-конфигурацией мутаций для синтетического дампа."""
         return f"COMMENT ON COLUMN {table}.{column} IS 'anon: {json.dumps(mutations)}';\n"
 
-    def lines(self):
+    def lines(self) -> Iterator[str]:
+        """Выдать комментарии, COPY, строки и терминаторы выбранного сценария."""
         mutation = {'mutation_name': 'random_choice', 'mutation_kwargs': {'choices': ['hidden']}}
         if self.scenario == 'conditions':
             mutation['conditions'] = [{'column_name': 'c2', 'operation': 'equal', 'value': 'yes'}]
@@ -91,14 +106,20 @@ class DumpInput:
                 yield '\t'.join(values) + '\n'
             yield '\\.\n'
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         for line in self.lines():
             self.bytes += len(line.encode('utf-8'))
             yield line
 
 
 class DumpOutput:
-    def __init__(self, workload, stream):
+    """Приёмник stdout: счётчики, выборочная проверка и опциональная бинарная запись.
+
+    Проверяются обе ветки conditions; для relations хешируются все строки обеих
+    таблиц. stream=None отбрасывает вывод, сохраняя проверки и счётчики.
+    """
+
+    def __init__(self, workload: DumpInput, stream: Optional[BinaryIO]) -> None:
         self.workload = workload
         self.stream = stream
         self.bytes = 0
@@ -107,7 +128,8 @@ class DumpOutput:
         self.digest = hashlib.sha256()
         self.table_digests = []
 
-    def write(self, text):
+    def write(self, text: str) -> int:
+        """Принять строку stdout, проверить выборку и вернуть число принятых символов."""
         data = text.encode('utf-8')
         self.bytes += len(data)
         if self.stream is not None:
@@ -122,11 +144,12 @@ class DumpOutput:
             self.rows += 1
             if self.workload.scenario == 'relations':
                 self.digest.update(data)
-            if self.rows % 1000 == 1:
+            if (self.rows - 1) % self.workload.rows % 1000 in (0, 1):
                 self.validate_row(text.rstrip('\n').split('\t'))
         return len(text)
 
-    def validate_row(self, values):
+    def validate_row(self, values: list[str]) -> None:
+        """Проверить мутации и неизменённые колонки; нарушение вызывает AssertionError."""
         if len(values) != self.workload.width or values[4:] != ['\\N', 'text\\tvalue'] + ['unchanged'] * (
             self.workload.width - 6
         ):
@@ -159,7 +182,15 @@ class DumpOutput:
             raise AssertionError(message)
 
 
-def measure(scenario, rows, output_mode, tmp_dir=None):
+def measure(scenario: str, rows: int, output_mode: str, tmp_dir: Optional[str] = None) -> dict[str, Any]:
+    """Измерить один сценарий в свежем Linux-процессе и вернуть словарь метрик.
+
+    В wall/CPU входят генерация входа, обфускация и проверка вывода; в file также
+    flush/fsync. Импорты и создание parser исключены из времени. RSS в MiB —
+    максимум за жизнь процесса, а не дельта; baseline позволяет оценить его вклад.
+    I/O и resource-счётчики — дельты замера. relations хранит O(rows) соответствий.
+    Ошибки результата передаются вызывающему процессу и делают запуск неуспешным.
+    """
     random.seed(42)
     parser = PlainObfuscator()
     workload = DumpInput(scenario, rows)
