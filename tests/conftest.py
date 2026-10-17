@@ -4,23 +4,9 @@ import shutil
 
 import pytest
 
-from pg_stage.obfuscators.plain import PlainObfuscator
-from tests.plain.helpers import PlainDump
 from tools.postgres import postgres_cluster
 
 pytest_plugins = ['tests.load.plugin']
-
-
-@pytest.fixture
-def obfuscator_object() -> PlainObfuscator:
-    """Создать новый plain-обфускатор без состояния предыдущего теста."""
-    return PlainObfuscator()
-
-
-@pytest.fixture
-def plain_dump() -> PlainDump:
-    """Предоставить доступ к сценариям единственного сохранённого plain-дампа."""
-    return PlainDump()
 
 
 def pytest_addoption(parser):

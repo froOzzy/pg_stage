@@ -8,9 +8,7 @@
 Для обычного запуска PostgreSQL устанавливать и запускать не требуется:
 
 ```bash
-python -m pytest tests/test_conditions.py tests/test_prepared_data.py \
-  tests/test_parse_comment_column.py tests/test_parse_comment_table.py \
-  tests/test_parse_copy_values.py tests/test_json_update_mutation.py tests/plain -q
+python -m pytest tests/plain -q
 ```
 
 ## Что сохранено
