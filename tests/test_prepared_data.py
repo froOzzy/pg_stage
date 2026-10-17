@@ -7,6 +7,59 @@ import pytest
 from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 
+@pytest.mark.parametrize('configured_context', [False, True])
+@pytest.mark.parametrize('with_relations', [False, True])
+def test_mutation_context_is_fresh_for_each_row(
+    obfuscator_object: PlainObfuscator,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    configured_context: bool,
+    with_relations: bool,
+) -> None:
+    """
+    Arrange: Мутация с source_column, опциональными relations и явно заданным контекстом
+    Act: Обработка двух строк с разными значениями и ключами связи
+    Assert: Каждая строка получает свой контекст, явные параметры сохранены, конфигурация не изменена
+    """
+    received = []
+
+    def mutate(**kwargs) -> str:
+        received.append((kwargs['current_value'], dict(kwargs['obfuscated_values'])))
+        return f'{kwargs["current_value"]}:{kwargs["obfuscated_values"]["name"]}'
+
+    monkeypatch.setattr(obfuscator_object._mutator, 'mutation_echo', mutate, raising=False)
+    mutation_kwargs = {'source_column': 'name'}
+    if configured_context:
+        mutation_kwargs.update(current_value='fixed', obfuscated_values={'name': 'configured'})
+    mutation = {'mutation_name': 'echo', 'mutation_kwargs': mutation_kwargs}
+    if with_relations:
+        mutation['relations'] = [
+            {
+                'table_name': 'peers',
+                'column_name': 'value',
+                'from_column_name': 'id',
+                'to_column_name': 'id',
+            }
+        ]
+    obfuscator_object._parse_line(
+        line=f"COMMENT ON COLUMN users.value IS 'anon: {json.dumps([mutation])}';",
+    )
+    obfuscator_object._parse_line(line='COPY users (value, id, name) FROM stdin;')
+
+    results = [
+        obfuscator_object._parse_line(line='first\t1\tAlice'),
+        obfuscator_object._parse_line(line='second\t2\tBob'),
+    ]
+
+    if configured_context:
+        assert results == ['fixed:configured\t1\tAlice', 'fixed:configured\t2\tBob']
+        assert received == [('fixed', {'name': 'configured'}), ('fixed', {'name': 'configured'})]
+    else:
+        assert results == ['first:Alice\t1\tAlice', 'second:Bob\t2\tBob']
+        assert received == [('first', {'id': '1', 'name': 'Alice'}), ('second', {'id': '2', 'name': 'Bob'})]
+    assert obfuscator_object._map_tables['users']['value'][0]['mutation_kwargs'] == mutation_kwargs
+
+
 def test_conditions_use_original_values(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп с мутацией статуса и условной мутацией email на основе исходного статуса
