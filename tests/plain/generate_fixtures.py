@@ -7,6 +7,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from tests.plain.helpers import qualified_table, schema_name
+
 ROOT = Path(__file__).resolve().parents[2]
 DESTINATION = Path(__file__).resolve().parent / 'fixtures'
 COPY = re.compile(r'COPY ([\w.]+) \(([^)]+)\) FROM stdin;')
@@ -273,22 +275,59 @@ def json_seeds():
     return seeds
 
 
-def generate(expected_major, selected_cases=None):
+def isolate_case(case, seed):
+    """Разнести сценарии по схемам до загрузки в PostgreSQL, сохраняя исходные COPY-значения."""
+    output = [f'CREATE SCHEMA {schema_name(case)};']
+    in_copy = False
+    for line in seed.splitlines():
+        if in_copy:
+            output.append(line)
+            if line == '\\.':
+                in_copy = False
+            continue
+        if line.startswith('CREATE SCHEMA'):
+            line = f'CREATE SCHEMA {schema_name(case, "schema")};'
+        else:
+            line = re.sub(
+                r'^(CREATE TABLE |COPY |COMMENT ON (?:TABLE|COLUMN) )([\w.]+)',
+                lambda match: (
+                    match[1]
+                    + (
+                        qualified_table(case, match[2].rsplit('.', 1)[0]) + '.' + match[2].rsplit('.', 1)[1]
+                        if match[1] == 'COMMENT ON COLUMN '
+                        else qualified_table(case, match[2])
+                    )
+                ),
+                line,
+            )
+            if line.startswith('COMMENT ') and " IS 'anon: " in line:
+                prefix, content = line.split(" IS 'anon: ", 1)
+                raw = content[:-2].replace("''", "'")
+                try:
+                    config = json.loads(raw)
+                except json.JSONDecodeError:
+                    pass  # В parser-сценарии намеренно хранится невалидный JSON.
+                else:
+                    if isinstance(config, list):
+                        for mutation in config:
+                            for relation in mutation.get('relations', []):
+                                relation['table_name'] = qualified_table(case, relation['table_name'])
+                    line = prefix + ' IS ' + literal('anon: ' + json.dumps(config)) + ';'
+        output.append(line)
+        in_copy = line.startswith('COPY ')
+    return '\n'.join(output) + '\n'
+
+
+def generate():
     version = subprocess.check_output(['pg_dump', '--version'], text=True)
     detected = re.search(r'(\d+)\.', version)
-    if detected is None or int(detected.group(1)) != expected_major:
-        message = f'Unexpected pg_dump version: {version.strip()} (expected {expected_major})'
+    if detected is None or int(detected.group(1)) != 15:
+        message = f'Unexpected pg_dump version: {version.strip()} (expected 15)'
         raise ValueError(message)
-    destination = DESTINATION / f'pg{expected_major}'
-    destination.mkdir(parents=True, exist_ok=True)
+    DESTINATION.mkdir(parents=True, exist_ok=True)
+    destination = DESTINATION / 'postgres15.sql'
     seeds = {path.stem: legacy_seed(path) for path in sorted((ROOT / 'tests' / 'sql').glob('test_*.sql'))}
     seeds.update(metadata=metadata_seed(), **regression_seeds(), **json_seeds())
-    if selected_cases:
-        unknown = set(selected_cases) - seeds.keys()
-        if unknown:
-            message = f'Unknown fixture cases: {sorted(unknown)}'
-            raise ValueError(message)
-        seeds = {case: seeds[case] for case in selected_cases}
     with tempfile.TemporaryDirectory(prefix='pg-stage-plain-') as directory:
         root = Path(directory)
         cluster = root / 'data'
@@ -324,38 +363,42 @@ def generate(expected_major, selected_cases=None):
         )
         connection = ['-h', str(root), '-p', '55432', '-U', 'fixture']
         try:
-            for index, (case, seed) in enumerate(seeds.items()):
-                database = f'case_{index}'
-                subprocess.run(['createdb', *connection, database], check=True, capture_output=True)
+            database = 'plain_fixtures'
+            subprocess.run(['createdb', *connection, database], check=True, capture_output=True)
+            for case, seed in seeds.items():
                 subprocess.run(
                     ['psql', *connection, '-d', database, '-v', 'ON_ERROR_STOP=1'],
-                    input=seed,
+                    input=isolate_case(case, seed),
                     text=True,
                     check=True,
                     capture_output=True,
                 )
-                subprocess.run(
-                    [
-                        'pg_dump',
-                        *connection,
-                        '-d',
-                        database,
-                        '-Fp',
-                        '--no-owner',
-                        '--no-privileges',
-                        '-f',
-                        str(destination / f'{case}.sql'),
-                    ],
-                    check=True,
-                )
-                subprocess.run(['dropdb', *connection, database], check=True, capture_output=True)
+            subprocess.run(
+                [
+                    'pg_dump',
+                    *connection,
+                    '-d',
+                    database,
+                    '-Fp',
+                    '--no-owner',
+                    '--no-privileges',
+                    '-f',
+                    str(destination),
+                ],
+                check=True,
+            )
+            # Проверка исходного snapshot штатным psql в отдельной пустой базе.
+            subprocess.run(['createdb', *connection, 'restore_check'], check=True, capture_output=True)
+            subprocess.run(
+                ['psql', *connection, '-d', 'restore_check', '-v', 'ON_ERROR_STOP=1', '-f', str(destination)],
+                check=True,
+                capture_output=True,
+            )
         finally:
             subprocess.run(['pg_ctl', '-D', str(cluster), '-m', 'immediate', '-w', 'stop'], check=True)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--expected-major', type=int, choices=(15, 16, 17, 18), required=True)
-    parser.add_argument('--case', action='append', help='Regenerate only selected cases')
-    args = parser.parse_args()
-    generate(args.expected_major, args.case)
+    parser.parse_args()
+    generate()

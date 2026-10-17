@@ -30,7 +30,7 @@ def sql_structure(sql: str) -> list[str]:
 )
 def test_real_dump_preserves_sql_structure(plain_dump, case: str) -> None:
     """
-    Arrange: Полный настоящий plain-дамп PG15–18 с заголовком, DDL, комментариями и COPY
+    Arrange: Исходные секции сценария из общего дампа PG15 с заголовком, DDL, комментариями и COPY
     Act: Обработка дампа через публичный PlainObfuscator.run
     Assert: Изменены только строки данных, весь SQL вне COPY и набор таблиц сохранены
     """

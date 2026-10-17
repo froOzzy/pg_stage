@@ -8,7 +8,7 @@ def obfuscator_object_with_delete_tables_by_pattern() -> PlainObfuscator:
     return PlainObfuscator(delete_tables_by_pattern=[r'_table', r'schema\.\_table'])
 
 
-@pytest.mark.parametrize('table_name', ['public.plain_values', 'schema.plain_values'])
+@pytest.mark.parametrize('table_name', ['metadata.plain_values', 'metadata__schema.plain_values'])
 def test_parse_copy_values_with_delete_comment(
     obfuscator_object: PlainObfuscator,
     table_name: str,
@@ -27,7 +27,7 @@ def test_parse_copy_values_with_delete_comment(
     assert obfuscator_object._is_data  # nosec
 
 
-@pytest.mark.parametrize('table_name', ['public.plain_values', 'schema.plain_values'])
+@pytest.mark.parametrize('table_name', ['metadata.plain_values', 'metadata__schema.plain_values'])
 def test_parse_copy_values_without_delete_comment(
     obfuscator_object: PlainObfuscator,
     table_name: str,
@@ -45,7 +45,7 @@ def test_parse_copy_values_without_delete_comment(
     assert obfuscator_object._is_data  # nosec
 
 
-@pytest.mark.parametrize('table_name', ['public._table', 'schema._table'])
+@pytest.mark.parametrize('table_name', ['metadata._table', 'metadata__schema._table'])
 def test_parse_copy_values_without_delete_tables_by_pattern(
     obfuscator_object_with_delete_tables_by_pattern: PlainObfuscator,
     table_name: str,
@@ -64,7 +64,7 @@ def test_parse_copy_values_without_delete_tables_by_pattern(
     assert obfuscator_object_with_delete_tables_by_pattern._is_data  # nosec
 
 
-@pytest.mark.parametrize('table_name', ['public.plain_values', 'schema.plain_values'])
+@pytest.mark.parametrize('table_name', ['metadata.plain_values', 'metadata__schema.plain_values'])
 def test_parse_copy_values_without_delete_tables_by_pattern_and_not_found_table(
     obfuscator_object_with_delete_tables_by_pattern: PlainObfuscator,
     table_name: str,

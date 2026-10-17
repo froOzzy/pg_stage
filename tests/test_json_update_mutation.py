@@ -18,7 +18,7 @@ def plain_json(plain_dump, mutator, request):
         case = 'json-' + request.node.originalname.removeprefix('test_json_update_')
         parser = PlainObfuscator()
         parser._mutator = mutator
-        rows = copy_rows(obfuscate(parser, plain_dump.read(case)))['public.json_values']
+        rows = copy_rows(obfuscate(parser, plain_dump.read(case)))[plain_dump.table(case, 'json_values')]
         assert len(rows) == 1
         fields = rows[0].split('\t')
         assert len(fields) == 2 and fields[0] == '1'

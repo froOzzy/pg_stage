@@ -32,8 +32,9 @@ def test_mutation_context_is_fresh_for_each_row(
     mutation_kwargs = {'source_column': 'name'}
     if configured_context:
         mutation_kwargs.update(current_value='fixed', obfuscated_values={'name': 'configured'})
-    dump_sql = plain_dump.read(f'context-{int(configured_context)}-{int(with_relations)}')
-    results = copy_rows(obfuscate(obfuscator_object, dump_sql))['public.users']
+    case = f'context-{int(configured_context)}-{int(with_relations)}'
+    dump_sql = plain_dump.read(case)
+    results = copy_rows(obfuscate(obfuscator_object, dump_sql))[plain_dump.table(case, 'users')]
 
     if configured_context:
         assert results == ['fixed:configured\t1\tAlice', 'fixed:configured\t2\tBob']
@@ -41,7 +42,9 @@ def test_mutation_context_is_fresh_for_each_row(
     else:
         assert results == ['first:Alice\t1\tAlice', 'second:Bob\t2\tBob']
         assert received == [('first', {'id': '1', 'name': 'Alice'}), ('second', {'id': '2', 'name': 'Bob'})]
-    assert obfuscator_object._map_tables['public.users']['value'][0]['mutation_kwargs'] == mutation_kwargs
+    assert (
+        obfuscator_object._map_tables[plain_dump.table(case, 'users')]['value'][0]['mutation_kwargs'] == mutation_kwargs
+    )
 
 
 def test_conditions_use_original_values(obfuscator_object: PlainObfuscator, plain_dump) -> None:
@@ -50,13 +53,14 @@ def test_conditions_use_original_values(obfuscator_object: PlainObfuscator, plai
     Act: Вызов функции `_parse_line` для строк данных и перехода к таблице без мутаций
     Assert: Условия используют исходный статус, остальные поля и данные следующей таблицы сохранены
     """
-    result = copy_rows(obfuscate(obfuscator_object, plain_dump.read('original_conditions')))
-    assert result['public.users'] == [
+    case = 'original_conditions'
+    result = copy_rows(obfuscate(obfuscator_object, plain_dump.read(case)))
+    assert result[plain_dump.table(case, 'users')] == [
         '1\tchanged\thidden\t\\N\t',
         '2\tchanged\tprivate\tliteral\\ttext\t',
     ]
-    assert result['public.zz_untouched'] == ['3\toriginal']
-    assert list(result) == ['public.users', 'public.zz_untouched']
+    assert result[plain_dump.table(case, 'zz_untouched')] == ['3\toriginal']
+    assert list(result) == [plain_dump.table(case, 'users'), plain_dump.table(case, 'zz_untouched')]
 
 
 @pytest.mark.parametrize('mutate_source', [False, True])
@@ -71,10 +75,11 @@ def test_source_column_context_preserves_column_order(
     Act: Вызов функции `_parse_line` для строки данных
     Assert: UUID вычислен по итоговому значению источника, порядок колонок и остальные поля сохранены
     """
-    result = copy_rows(obfuscate(obfuscator_object, plain_dump.read(f'source-{int(mutate_source)}')))
+    case = f'source-{int(mutate_source)}'
+    result = copy_rows(obfuscate(obfuscator_object, plain_dump.read(case)))
     name = 'hidden' if mutate_source else 'original'
     token = uuid.uuid5(uuid.NAMESPACE_DNS, f'{name}-{date.today()}')
-    assert result['public.users'] == [f'{token}\t1\t{name}\t\\N']
+    assert result[plain_dump.table(case, 'users')] == [f'{token}\t1\t{name}\t\\N']
 
 
 def test_parse_copy_values_with_delete_table(obfuscator_object: PlainObfuscator, plain_dump) -> None:
@@ -83,11 +88,12 @@ def test_parse_copy_values_with_delete_table(obfuscator_object: PlainObfuscator,
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout нет данных из таблицы
     """
-    dump_sql = plain_dump.read('test_parse_copy_values_with_delete_tables')
+    case = 'test_parse_copy_values_with_delete_tables'
+    dump_sql = plain_dump.read(case)
 
     result = obfuscate(obfuscator_object, dump_sql)
-    assert copy_rows(result) == {'public.table_1': [], 'schema.table_2': []}
-    for table in ['public.table_1', 'schema.table_2']:
+    assert copy_rows(result) == {plain_dump.table(case, 'table_1'): [], plain_dump.table(case, 'schema.table_2'): []}
+    for table in [plain_dump.table(case, 'table_1'), plain_dump.table(case, 'schema.table_2')]:
         comment = plain_dump.statement('test_parse_copy_values_with_delete_tables', f'COMMENT ON TABLE {table} ')
         assert comment in result
         assert f'COPY {table} (id, message, recipient, notes) FROM stdin;' in result
@@ -100,7 +106,8 @@ def test_parse_copy_values_with_mutation(obfuscator_object: PlainObfuscator, pla
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout данные полей мутированы
     """
-    dump_sql = plain_dump.read('test_parse_copy_values_with_mutation')
+    case = 'test_parse_copy_values_with_mutation'
+    dump_sql = plain_dump.read(case)
     obfuscator_object._mutator._datetime.reseed(42)
 
     emails = {
@@ -151,7 +158,8 @@ def test_parse_copy_values_with_relations(obfuscator_object: PlainObfuscator, pl
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout данные поле мутировано во всех таблицах одинаково и не задета таблица с похожими данными
     """
-    dump_sql = plain_dump.read('test_parse_copy_values_with_relations')
+    case = 'test_parse_copy_values_with_relations'
+    dump_sql = plain_dump.read(case)
 
     result = []
     for line in dump_sql.splitlines():
@@ -193,7 +201,8 @@ def test_parse_copy_values_with_self_relation(obfuscator_object: PlainObfuscator
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout данные поле мутировано в двух столбцах одинаково
     """
-    dump_sql = plain_dump.read('test_parse_copy_values_with_self_relation')
+    case = 'test_parse_copy_values_with_self_relation'
+    dump_sql = plain_dump.read(case)
 
     result = []
     for line in dump_sql.splitlines():
@@ -230,10 +239,15 @@ def test_relations_with_multiple_keys_and_different_column_order(
         return value
 
     monkeypatch.setattr(obfuscator_object._mutator, 'mutation_first_name', mutate)
-    result = copy_rows(obfuscate(obfuscator_object, plain_dump.read(f'relations-{table_order[0]}')))
+    case = f'relations-{table_order[0]}'
+    result = copy_rows(obfuscate(obfuscator_object, plain_dump.read(case)))
     tables = {
-        'source': 'public.a_source' if table_order[0] == 'source' else 'public.b_source',
-        'target': 'public.b_target' if table_order[0] == 'source' else 'public.a_target',
+        'source': plain_dump.table(case, 'a_source')
+        if table_order[0] == 'source'
+        else plain_dump.table(case, 'b_source'),
+        'target': plain_dump.table(case, 'b_target')
+        if table_order[0] == 'source'
+        else plain_dump.table(case, 'a_target'),
     }
     assert list(result) == [tables[table] for table in table_order]
     results = {table: result[name] for table, name in tables.items()}
@@ -250,7 +264,8 @@ def test_two_mutation_for_one_column(obfuscator_object: PlainObfuscator, plain_d
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout данные поля мутированы
     """
-    dump_sql = plain_dump.read('test_two_mutation_for_one_column')
+    case = 'test_two_mutation_for_one_column'
+    dump_sql = plain_dump.read(case)
 
     result = []
     for line in dump_sql.splitlines():
@@ -277,7 +292,8 @@ def test_obfuscate_uuid_by_source_column(obfuscator_object: PlainObfuscator, pla
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout данные поля мутированы на основе мутированного значения другой колонки
     """
-    dump_sql = plain_dump.read('test_obfuscate_uuid_by_source_value')
+    case = 'test_obfuscate_uuid_by_source_value'
+    dump_sql = plain_dump.read(case)
 
     result = []
     for line in dump_sql.splitlines():

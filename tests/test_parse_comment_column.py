@@ -5,7 +5,7 @@ from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 @pytest.mark.parametrize(
     'table_name, column_name',
-    [('public.null_column', 'field_value'), ('schema.null_column', 'field_value')],
+    [('metadata.null_column', 'field_value'), ('metadata__schema.null_column', 'field_value')],
 )
 def test_parse_comment_column_with_mutation(
     obfuscator_object: PlainObfuscator,
@@ -28,7 +28,7 @@ def test_parse_comment_column_with_mutation(
 
 @pytest.mark.parametrize(
     'table_name, column_name',
-    [('public.unknown_column', 'field_value'), ('schema.unknown_column', 'field_value')],
+    [('metadata.unknown_column', 'field_value'), ('metadata__schema.unknown_column', 'field_value')],
 )
 def test_parse_comment_column_without_mutation(
     obfuscator_object: PlainObfuscator,
@@ -49,7 +49,7 @@ def test_parse_comment_column_without_mutation(
 
 @pytest.mark.parametrize(
     'table_name, column_name',
-    [('public.invalid_column', 'field_value'), ('schema.invalid_column', 'field_value')],
+    [('metadata.invalid_column', 'field_value'), ('metadata__schema.invalid_column', 'field_value')],
 )
 def test_parse_comment_column_with_invalid_mutation(
     obfuscator_object: PlainObfuscator,

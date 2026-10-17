@@ -3,7 +3,7 @@ import pytest
 from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 
-@pytest.mark.parametrize('table_name', ['public.deleted_table', 'schema.deleted_table'])
+@pytest.mark.parametrize('table_name', ['metadata.deleted_table', 'metadata__schema.deleted_table'])
 def test_parse_comment_table_with_mutation(
     obfuscator_object: PlainObfuscator,
     table_name: str,
@@ -20,7 +20,7 @@ def test_parse_comment_table_with_mutation(
     assert table_name in obfuscator_object._delete_tables  # nosec
 
 
-@pytest.mark.parametrize('table_name', ['public.kept_table', 'schema.kept_table'])
+@pytest.mark.parametrize('table_name', ['metadata.kept_table', 'metadata__schema.kept_table'])
 def test_parse_comment_table_with_invalid_mutation(
     obfuscator_object: PlainObfuscator,
     table_name: str,

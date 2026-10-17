@@ -8,9 +8,10 @@ def test_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
-    dump_sql = plain_dump.read('test_equal_condition')
+    case = 'test_equal_condition'
+    dump_sql = plain_dump.read(case)
 
-    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))['public.table_1']
+    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))[plain_dump.table(case, 'table_1')]
     assert len(rows) == 2
     for new_line in rows:
         if new_line.startswith('1'):
@@ -26,9 +27,10 @@ def test_not_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> 
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
-    dump_sql = plain_dump.read('test_not_equal_condition')
+    case = 'test_not_equal_condition'
+    dump_sql = plain_dump.read(case)
 
-    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))['public.table_1']
+    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))[plain_dump.table(case, 'table_1')]
     assert len(rows) == 2
     for new_line in rows:
         if new_line.startswith('1'):
@@ -44,9 +46,10 @@ def test_by_pattern_condition(obfuscator_object: PlainObfuscator, plain_dump) ->
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
-    dump_sql = plain_dump.read('test_by_pattern_condition')
+    case = 'test_by_pattern_condition'
+    dump_sql = plain_dump.read(case)
 
-    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))['public.table_1']
+    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))[plain_dump.table(case, 'table_1')]
     assert len(rows) == 2
     for new_line in rows:
         if new_line.startswith('1'):

@@ -57,8 +57,8 @@ You can see the current list [here](https://github.com/froOzzy/pg_stage/blob/mai
 
 ## Tests
 
-Run `python -m pytest` for the regular test suite. Plain-format tests use real
-`pg_dump -Fp` fixtures from PostgreSQL 15–18 and require no running database.
+Run `python -m pytest` for the regular test suite. Plain-format tests use one real
+PostgreSQL 15 `pg_dump -Fp` fixture containing all scenarios and require no running database.
 See [plain test scenarios and fixture regeneration](tests/plain/README.md).
 
 ## Load tests
