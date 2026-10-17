@@ -21,3 +21,44 @@ jobs:
 
       - name: Run tests
         run: poetry run pytest
+
+  load-test:
+    name: Load tests
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: python -m pip install -e . pytest==7.3.1
+
+      - name: Run load tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/pg-stage-load"
+          python -m pytest tests/load --run-load -q \
+            --load-rows 100000 \
+            --load-repeats 3 \
+            --load-output-mode both \
+            --load-tmp-dir "$RUNNER_TEMP" \
+            --load-report "$RUNNER_TEMP/pg-stage-load/load-results.json" \
+            --junitxml="$RUNNER_TEMP/pg-stage-load/junit.xml"
+      
+      - name: Upload load test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-reports
+          path: ${{ runner.temp }}/pg-stage-load/
+          if-no-files-found: warn
+          retention-days: 14
