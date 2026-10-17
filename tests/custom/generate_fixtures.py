@@ -1,5 +1,7 @@
-"""Создать настоящие custom-дампы PostgreSQL 17 в изолированном временном кластере."""
+"""Создать custom-дампы PostgreSQL 15–18 в изолированном временном кластере."""
 
+import argparse
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -7,7 +9,13 @@ from pathlib import Path
 FIXTURES = Path(__file__).resolve().parent / 'fixtures'
 
 
-def generate():
+def generate(expected_major=None):
+    version = subprocess.check_output(['pg_dump', '--version'], text=True)
+    match = re.search(r'(\d+)\.', version)
+    major = int(match.group(1)) if match else None
+    if major not in (15, 16, 17, 18) or (expected_major is not None and major != expected_major):
+        message = f'Unexpected pg_dump version: {version.strip()} (expected major: {expected_major})'
+        raise ValueError(message)
     with tempfile.TemporaryDirectory(prefix='pg-stage-fixtures-') as directory:
         root = Path(directory)
         cluster = root / 'data'
@@ -58,7 +66,7 @@ def generate():
                         '--no-owner',
                         '--no-privileges',
                         '-f',
-                        str(FIXTURES / f'postgres17-z{compression}.dump'),
+                        str(FIXTURES / f'postgres{major}-z{compression}.dump'),
                     ],
                     check=True,
                 )
@@ -67,4 +75,6 @@ def generate():
 
 
 if __name__ == '__main__':
-    generate()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--expected-major', type=int, choices=(15, 16, 17, 18))
+    generate(parser.parse_args().expected_major)

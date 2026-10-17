@@ -60,6 +60,13 @@ You can see the current list [here](https://github.com/froOzzy/pg_stage/blob/mai
 Linux load tests measure throughput, CPU, peak RSS and process disk I/O.
 See [run instructions and metric definitions](tests/load/README.md).
 
+## Custom-format compatibility
+
+The compatibility target is dumps produced by `pg_dump` 15 and later.
+The current regression matrix covers PostgreSQL 15–18 with no compression and gzip.
+Custom-format support is still incomplete; known failures are tracked by strict
+expected-failure tests. See the [compatibility matrix and known defects](tests/custom/README.md).
+
 ## Why did I write my utility?
 
 I also adhere to the rule that you do not need to place third-party plugins in the working database for its security 

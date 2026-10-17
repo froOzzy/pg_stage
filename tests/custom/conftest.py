@@ -21,12 +21,13 @@ def custom_fixtures() -> Path:
 
 
 @pytest.fixture
-def pg_restore() -> str:
+def pg_restore(request) -> str:
+    required_major = request.node.callspec.params['pg_major']
     executable = shutil.which('pg_restore')
     if executable is None:
-        pytest.skip('Для независимой проверки нужен pg_restore версии 17 или новее')
+        pytest.skip(f'Для независимой проверки нужен pg_restore версии {required_major} или новее')
     version = subprocess.check_output([executable, '--version'], text=True)
     major = re.search(r'(\d+)\.', version)
-    if major is None or int(major.group(1)) < 17:
-        pytest.skip(f'Нужен pg_restore >= 17, найден {version.strip()}')
+    if major is None or int(major.group(1)) < required_major:
+        pytest.skip(f'Нужен pg_restore >= {required_major}, найден {version.strip()}')
     return executable
