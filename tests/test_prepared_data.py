@@ -8,6 +8,11 @@ from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 
 def test_conditions_use_original_values(obfuscator_object: PlainObfuscator) -> None:
+    """
+    Arrange: Дамп с мутацией статуса и условной мутацией email на основе исходного статуса
+    Act: Вызов функции `_parse_line` для строк данных и перехода к таблице без мутаций
+    Assert: Условия используют исходный статус, остальные поля и данные следующей таблицы сохранены
+    """
     rules = {
         'status': [{'mutation_name': 'random_choice', 'mutation_kwargs': {'choices': ['changed']}}],
         'email': [
@@ -39,6 +44,11 @@ def test_source_column_context_preserves_column_order(
     *,
     mutate_source: bool,
 ) -> None:
+    """
+    Arrange: Дамп с UUID на основе колонки, расположенной после него, с мутацией источника или без неё
+    Act: Вызов функции `_parse_line` для строки данных
+    Assert: UUID вычислен по итоговому значению источника, порядок колонок и остальные поля сохранены
+    """
     namespace = uuid.NAMESPACE_DNS
     mutation = [
         {
