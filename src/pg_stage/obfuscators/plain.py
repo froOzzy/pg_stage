@@ -2,25 +2,18 @@ import json
 import re
 import sys
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
-from pg_stage.types import ConditionTypeMany, MapTablesValueType, MapTablesValueTypeMany
+from pg_stage.types import (
+    ConditionTypeMany,
+    MapTablesValueType,
+    MapTablesValueTypeMany,
+    PreparedMutation,
+    PreparedRelation,
+)
 from pg_stage.utils import get_mutation_func, run_mutation
-
-
-class _PreparedRelation(NamedTuple):
-    target_key: str
-    target_column: str
-    source_column: str
-    source_index: int
-    source_key: str
-
-
-class _PreparedMutation(NamedTuple):
-    config: MapTablesValueType
-    relations: List[_PreparedRelation]
 
 
 class PlainObfuscator:
@@ -56,7 +49,7 @@ class PlainObfuscator:
         self._delete_tables: Set[str] = set()
         self._is_delete: bool = False
         self._sorted_columns: list[str] = []
-        self._column_plan: List[Tuple[str, int, List[_PreparedMutation]]] = []
+        self._column_plan: List[Tuple[str, int, List[PreparedMutation]]] = []
         self._needs_column_context = False
 
     def _prepare_variables(self, *, line: str) -> Optional[str]:
@@ -283,13 +276,13 @@ class PlainObfuscator:
 
         return self.delimiter.join(result_values)
 
-    def _prepare_mutation(self, *, column_name: str, mutation: MapTablesValueType) -> _PreparedMutation:
+    def _prepare_mutation(self, *, column_name: str, mutation: MapTablesValueType) -> PreparedMutation:
         """Подготовить ключи и индексы связей для обработки строк текущей таблицы."""
         source_key = f'{self._table_name}:{column_name}'
-        return _PreparedMutation(
+        return PreparedMutation(
             config=mutation,
             relations=[
-                _PreparedRelation(
+                PreparedRelation(
                     target_key=f'{relation["table_name"]}:{relation["column_name"]}',
                     target_column=relation['to_column_name'],
                     source_column=relation['from_column_name'],

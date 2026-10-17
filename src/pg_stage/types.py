@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, NamedTuple
 
 from typing_extensions import TypedDict
 
@@ -43,6 +43,24 @@ class MapTablesValueType(TypedDict):
 
 
 MapTablesValueTypeMany = List[MapTablesValueType]
+
+
+class PreparedRelation(NamedTuple):
+    """Подготовленные ключи и индекс колонки для обработки связи."""
+
+    target_key: str
+    target_column: str
+    source_column: str
+    source_index: int
+    source_key: str
+
+
+class PreparedMutation(NamedTuple):
+    """Конфигурация мутации с подготовленными связями."""
+
+    config: MapTablesValueType
+    relations: List[PreparedRelation]
+
 
 Version = tuple[int, int, int]
 DumpId = int
