@@ -133,6 +133,7 @@ src/main.py
 
 # Benchmark
 benchmark.py
+/load-results*.json
 
 # Ruff
 .ruff_cache/
