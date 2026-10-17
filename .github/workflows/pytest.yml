@@ -23,7 +23,6 @@ jobs:
         run: poetry run pytest
 
   load-test:
-    name: Load tests
     needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 10
