@@ -225,6 +225,7 @@ class PlainObfuscator:
                 if not mutation_relations:
                     is_obfuscated = True
                     result_values[column_index] = run_mutation(
+                        mutation_func=prepared_mutation.mutation_func,
                         mutation_owner=self._mutator,
                         mutation_name=mutation_name,
                         mutation_kwargs=mutation_kwargs,
@@ -254,6 +255,7 @@ class PlainObfuscator:
                 if new_value is None:
                     relation_fk = str(uuid4())
                     new_value = run_mutation(
+                        mutation_func=prepared_mutation.mutation_func,
                         mutation_owner=self._mutator,
                         mutation_name=mutation_name,
                         mutation_kwargs=mutation_kwargs,
@@ -277,10 +279,11 @@ class PlainObfuscator:
         return self.delimiter.join(result_values)
 
     def _prepare_mutation(self, *, column_name: str, mutation: MapTablesValueType) -> PreparedMutation:
-        """Подготовить ключи и индексы связей для обработки строк текущей таблицы."""
+        """Подготовить функцию мутации, ключи и индексы связей для строк текущей таблицы."""
         source_key = f'{self._table_name}:{column_name}'
         return PreparedMutation(
             config=mutation,
+            mutation_func=get_mutation_func(mutation_owner=self._mutator, mutation_name=mutation['mutation_name']),
             relations=[
                 PreparedRelation(
                     target_key=f'{relation["table_name"]}:{relation["column_name"]}',

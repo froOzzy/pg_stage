@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, NamedTuple
+from typing import Any, Callable, Dict, List, NamedTuple
 
 from typing_extensions import TypedDict
 
@@ -56,10 +56,11 @@ class PreparedRelation(NamedTuple):
 
 
 class PreparedMutation(NamedTuple):
-    """Конфигурация мутации с подготовленными связями."""
+    """Конфигурация мутации с подготовленными связями и функцией обработки."""
 
     config: MapTablesValueType
     relations: List[PreparedRelation]
+    mutation_func: Callable[..., Any]
 
 
 Version = tuple[int, int, int]

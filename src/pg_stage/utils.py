@@ -39,6 +39,7 @@ def run_mutation(
     mutation_kwargs: Optional[dict[str, Any]] = None,
     current_value: Any = None,
     obfuscated_values: Optional[dict[str, Any]] = None,
+    mutation_func: Optional[Callable[..., Any]] = None,
 ) -> Any:
     """
     Метод для выполнения мутации с безопасным merge runtime-контекста.
@@ -47,6 +48,7 @@ def run_mutation(
     :param mutation_kwargs: параметры мутации, опционально
     :param current_value: текущее значение поля, опционально
     :param obfuscated_values: словарь обфусцированных значений для cross-column операций, опционально
+    :param mutation_func: заранее подготовленная функция мутации, опционально
     :return: результат применения мутации
     """
     call_kwargs: dict[str, Any] = dict(mutation_kwargs or {})
@@ -54,7 +56,8 @@ def run_mutation(
     if obfuscated_values is not None:
         call_kwargs.setdefault('obfuscated_values', obfuscated_values)
 
-    mutation_func = get_mutation_func(mutation_owner=mutation_owner, mutation_name=mutation_name)
+    if mutation_func is None:
+        mutation_func = get_mutation_func(mutation_owner=mutation_owner, mutation_name=mutation_name)
     return mutation_func(**call_kwargs)
 
 
