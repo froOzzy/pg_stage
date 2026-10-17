@@ -1,7 +1,64 @@
+import json
 import uuid
 from datetime import date
 
+import pytest
+
 from src.pg_stage.obfuscators.plain import PlainObfuscator
+
+
+def test_conditions_use_original_values(obfuscator_object: PlainObfuscator) -> None:
+    rules = {
+        'status': [{'mutation_name': 'random_choice', 'mutation_kwargs': {'choices': ['changed']}}],
+        'email': [
+            {
+                'mutation_name': 'random_choice',
+                'mutation_kwargs': {'choices': ['hidden']},
+                'conditions': [{'column_name': 'status', 'operation': 'equal', 'value': 'original'}],
+            }
+        ],
+    }
+    for column, mutations in rules.items():
+        obfuscator_object._parse_line(
+            line=f"COMMENT ON COLUMN users.{column} IS 'anon: {json.dumps(mutations)}';",
+        )
+    obfuscator_object._parse_line(line='COPY users (id, status, email, notes, empty) FROM stdin;')
+
+    assert obfuscator_object._parse_line(line='1\toriginal\tprivate\t\\N\t') == '1\tchanged\thidden\t\\N\t'
+    assert obfuscator_object._parse_line(line='2\tother\tprivate\tliteral\\ttext\t') == (
+        '2\tchanged\tprivate\tliteral\\ttext\t'
+    )
+    obfuscator_object._parse_line(line='\\.')
+    obfuscator_object._parse_line(line='COPY untouched (id, name) FROM stdin;')
+    assert obfuscator_object._parse_line(line='3\toriginal') == '3\toriginal'
+
+
+@pytest.mark.parametrize('mutate_source', [False, True])
+def test_source_column_context_preserves_column_order(
+    obfuscator_object: PlainObfuscator,
+    *,
+    mutate_source: bool,
+) -> None:
+    namespace = uuid.NAMESPACE_DNS
+    mutation = [
+        {
+            'mutation_name': 'uuid5_by_source_value',
+            'mutation_kwargs': {'source_column': 'name', 'namespace': str(namespace)},
+        }
+    ]
+    obfuscator_object._parse_line(
+        line=f"COMMENT ON COLUMN users.token IS 'anon: {json.dumps(mutation)}';",
+    )
+    if mutate_source:
+        mutation = [{'mutation_name': 'random_choice', 'mutation_kwargs': {'choices': ['hidden']}}]
+        obfuscator_object._parse_line(
+            line=f"COMMENT ON COLUMN users.name IS 'anon: {json.dumps(mutation)}';",
+        )
+    obfuscator_object._parse_line(line='COPY users (token, id, name, notes) FROM stdin;')
+
+    name = 'hidden' if mutate_source else 'original'
+    token = uuid.uuid5(namespace, f'{name}-{date.today()}')
+    assert obfuscator_object._parse_line(line='old-token\t1\toriginal\t\\N') == f'{token}\t1\t{name}\t\\N'
 
 
 def test_parse_copy_values_with_delete_table(obfuscator_object: PlainObfuscator) -> None:
