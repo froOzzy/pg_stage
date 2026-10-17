@@ -2,11 +2,10 @@
 
 import argparse
 import re
-import subprocess
 import tempfile
 from pathlib import Path
 
-from tools.postgres import postgres_cluster
+from tools.postgres import postgres_cluster, run_postgres
 
 FIXTURES = Path(__file__).resolve().parents[1] / 'tests'
 
@@ -19,7 +18,7 @@ def generate(dump_format: str, expected_major: int) -> None:
     восстанавливается в пустую БД. Ошибка любой проверки сохраняет прежние файлы;
     успешные файлы заменяются атомарно по одному в пределах той же файловой системы.
     """
-    version = subprocess.check_output(['pg_dump', '--version'], text=True)
+    version = run_postgres('pg_dump', '--version').stdout
     match = re.search(r'(\d+)\.', version)
     if match is None or int(match[1]) != expected_major:
         message = f'Unexpected pg_dump version: {version.strip()} (expected {expected_major})'
@@ -49,10 +48,13 @@ def generate(dump_format: str, expected_major: int) -> None:
             if compression is None:
                 postgres.sql(verify_database, candidate.read_text(encoding='utf-8'))
             else:
-                subprocess.run(
-                    ['pg_restore', *postgres.connection, '-d', verify_database, '--exit-on-error', str(candidate)],
-                    check=True,
-                    capture_output=True,
+                run_postgres(
+                    'pg_restore',
+                    *postgres.connection,
+                    '-d',
+                    verify_database,
+                    '--exit-on-error',
+                    str(candidate),
                 )
             outputs.append((candidate, fixtures / name))
         # Сначала проверяем все результаты, затем публикуем каждый через rename.

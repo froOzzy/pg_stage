@@ -7,7 +7,7 @@ pkgs.mkShell {
     if [ ! -d .venv ]; then
       ${pkgs.python311}/bin/python3 -m venv .venv
       .venv/bin/python -m pip install -e . \
-        pytest==7.3.1 bandit==1.7.5 mypy==1.4.1
+        pytest==7.3.1 bandit==1.7.5 pbr==7.1.3 mypy==1.4.1
     fi
 
     if [ ! -x .venv/bin/python ]; then
