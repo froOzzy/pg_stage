@@ -55,6 +55,11 @@ pg_dump -Fc -d database | python3 main.py > backup.dump
 
 You can see the current list [here](https://github.com/froOzzy/pg_stage/blob/main/src/pg_stage/mutator.py).
 
+## Load tests
+
+Linux load tests measure throughput, CPU, peak RSS and process disk I/O.
+See [run instructions and metric definitions](tests/load/README.md).
+
 ## Why did I write my utility?
 
 I also adhere to the rule that you do not need to place third-party plugins in the working database for its security 
