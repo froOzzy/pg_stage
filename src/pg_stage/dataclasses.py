@@ -2,7 +2,7 @@ import datetime
 from dataclasses import dataclass, field
 from typing import Iterator, Optional
 
-from pg_stage.contstants import CompressionMethod, SectionType
+from pg_stage.constants import CompressionMethod, SectionType
 from pg_stage.types import DumpId, Offset, Version
 
 
