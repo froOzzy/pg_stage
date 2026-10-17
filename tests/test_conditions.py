@@ -1,58 +1,56 @@
 from src.pg_stage.obfuscators.plain import PlainObfuscator
+from tests.plain.helpers import copy_rows, obfuscate
 
 
-def test_equal_condition(obfuscator_object: PlainObfuscator) -> None:
+def test_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
-    with open('tests/sql/test_equal_condition.sql') as file:
-        dump_sql = file.read()
+    dump_sql = plain_dump.read('test_equal_condition')
 
-    for line in dump_sql.splitlines():
-        new_line = obfuscator_object._parse_line(line=line)
-        if new_line is not None:
-            if new_line.startswith('1'):
-                assert 'test@mail.ru' not in new_line  # nosec
+    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))['public.table_1']
+    assert len(rows) == 2
+    for new_line in rows:
+        if new_line.startswith('1'):
+            assert 'test@mail.ru' not in new_line  # nosec
 
-            if new_line.startswith('2'):
-                assert 'test@mail.ru' in new_line  # nosec
+        if new_line.startswith('2'):
+            assert 'test@mail.ru' in new_line  # nosec
 
 
-def test_not_equal_condition(obfuscator_object: PlainObfuscator) -> None:
+def test_not_equal_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
-    with open('tests/sql/test_not_equal_condition.sql') as file:
-        dump_sql = file.read()
+    dump_sql = plain_dump.read('test_not_equal_condition')
 
-    for line in dump_sql.splitlines():
-        new_line = obfuscator_object._parse_line(line=line)
-        if new_line is not None:
-            if new_line.startswith('1'):
-                assert 'test@mail.ru' in new_line  # nosec
+    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))['public.table_1']
+    assert len(rows) == 2
+    for new_line in rows:
+        if new_line.startswith('1'):
+            assert 'test@mail.ru' in new_line  # nosec
 
-            if new_line.startswith('2'):
-                assert 'test@mail.ru' not in new_line  # nosec
+        if new_line.startswith('2'):
+            assert 'test@mail.ru' not in new_line  # nosec
 
 
-def test_by_pattern_condition(obfuscator_object: PlainObfuscator) -> None:
+def test_by_pattern_condition(obfuscator_object: PlainObfuscator, plain_dump) -> None:
     """
     Arrange: Дамп таблиц, данные в которой необходимо обфусцировать
     Act: Вызов функции `_parse_line` класса Obfuscator
     Assert: В stdout обфусцированы только те данные, условия которых выполняются
     """
-    with open('tests/sql/test_by_pattern_condition.sql') as file:
-        dump_sql = file.read()
+    dump_sql = plain_dump.read('test_by_pattern_condition')
 
-    for line in dump_sql.splitlines():
-        new_line = obfuscator_object._parse_line(line=line)
-        if new_line is not None:
-            if new_line.startswith('1'):
-                assert 'test@mail.ru' not in new_line  # nosec
+    rows = copy_rows(obfuscate(obfuscator_object, dump_sql))['public.table_1']
+    assert len(rows) == 2
+    for new_line in rows:
+        if new_line.startswith('1'):
+            assert 'test@mail.ru' not in new_line  # nosec
 
-            if new_line.startswith('2'):
-                assert 'test@mail.ru' not in new_line  # nosec
+        if new_line.startswith('2'):
+            assert 'test@mail.ru' not in new_line  # nosec

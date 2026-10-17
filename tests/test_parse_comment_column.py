@@ -5,12 +5,13 @@ from src.pg_stage.obfuscators.plain import PlainObfuscator
 
 @pytest.mark.parametrize(
     'table_name, column_name',
-    [('table', 'column'), ('schema.table', 'column')],
+    [('public.null_column', 'field_value'), ('schema.null_column', 'field_value')],
 )
 def test_parse_comment_column_with_mutation(
     obfuscator_object: PlainObfuscator,
     table_name: str,
     column_name: str,
+    plain_dump,
 ) -> None:
     """
     Arrange: Строка, в которой есть комментарий к колонке
@@ -18,7 +19,7 @@ def test_parse_comment_column_with_mutation(
     Assert: Мутация добавлена в список _map_tables
     """
     obfuscator_object._parse_line(
-        line=f'COMMENT ON COLUMN {table_name}.{column_name}' + ' IS \'anon: [{"mutation_name": "null"}]\';',
+        line=plain_dump.statement('metadata', f'COMMENT ON COLUMN {table_name}.{column_name} '),
     )
     assert table_name in obfuscator_object._map_tables  # nosec
     assert column_name in obfuscator_object._map_tables[table_name]  # nosec
@@ -27,12 +28,13 @@ def test_parse_comment_column_with_mutation(
 
 @pytest.mark.parametrize(
     'table_name, column_name',
-    [('table', 'column'), ('schema.table', 'column')],
+    [('public.unknown_column', 'field_value'), ('schema.unknown_column', 'field_value')],
 )
 def test_parse_comment_column_without_mutation(
     obfuscator_object: PlainObfuscator,
     table_name: str,
     column_name: str,
+    plain_dump,
 ) -> None:
     """
     Arrange: Строка, в которой есть комментарий к колонке с неизвестной мутацией
@@ -41,18 +43,19 @@ def test_parse_comment_column_without_mutation(
     """
     with pytest.raises(ValueError):
         obfuscator_object._parse_line(
-            line=f'COMMENT ON COLUMN {table_name}.{column_name}' + ' IS \'anon: [{"mutation_name": "not_found"}]\';',
+            line=plain_dump.statement('metadata', f'COMMENT ON COLUMN {table_name}.{column_name} '),
         )
 
 
 @pytest.mark.parametrize(
     'table_name, column_name',
-    [('table', 'column'), ('schema.table', 'column')],
+    [('public.invalid_column', 'field_value'), ('schema.invalid_column', 'field_value')],
 )
 def test_parse_comment_column_with_invalid_mutation(
     obfuscator_object: PlainObfuscator,
     table_name: str,
     column_name: str,
+    plain_dump,
 ) -> None:
     """
     Arrange: Строка, в которой есть невалидный комментарий к колонке
@@ -60,6 +63,6 @@ def test_parse_comment_column_with_invalid_mutation(
     Assert: Мутация не добавлена в список _map_tables
     """
     obfuscator_object._parse_line(
-        line=f'COMMENT ON COLUMN {table_name}.{column_name}' + ' IS \'anon: {\'mutation_name": "null"}\';',
+        line=plain_dump.statement('metadata', f'COMMENT ON COLUMN {table_name}.{column_name} '),
     )
     assert table_name not in obfuscator_object._map_tables  # nosec

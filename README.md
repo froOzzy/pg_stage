@@ -55,6 +55,12 @@ pg_dump -Fc -d database | python3 main.py > backup.dump
 
 You can see the current list [here](https://github.com/froOzzy/pg_stage/blob/main/src/pg_stage/mutator.py).
 
+## Tests
+
+Run `python -m pytest` for the regular test suite. Plain-format tests use real
+`pg_dump -Fp` fixtures from PostgreSQL 15–18 and require no running database.
+See [plain test scenarios and fixture regeneration](tests/plain/README.md).
+
 ## Load tests
 
 Linux load tests measure throughput, CPU, peak RSS and process disk I/O.
