@@ -6,7 +6,13 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from uuid import uuid4
 
 from pg_stage.mutator import Mutator
-from pg_stage.types import ConditionTypeMany, MapTablesValueTypeMany
+from pg_stage.types import (
+    ConditionTypeMany,
+    MapTablesValueType,
+    MapTablesValueTypeMany,
+    PreparedMutation,
+    PreparedRelation,
+)
 from pg_stage.utils import get_mutation_func, run_mutation
 
 
@@ -43,7 +49,7 @@ class PlainObfuscator:
         self._delete_tables: Set[str] = set()
         self._is_delete: bool = False
         self._sorted_columns: list[str] = []
-        self._column_plan: List[Tuple[str, int, MapTablesValueTypeMany]] = []
+        self._column_plan: List[Tuple[str, int, List[PreparedMutation]]] = []
         self._needs_column_context = False
 
     def _prepare_variables(self, *, line: str) -> Optional[str]:
@@ -196,13 +202,14 @@ class PlainObfuscator:
 
             is_obfuscated = False
             len_mutations_for_column = len(mutations_for_column)
-            for mutation_index, mutation_for_column in enumerate(mutations_for_column):
+            for mutation_index, prepared_mutation in enumerate(mutations_for_column):
                 if is_obfuscated:
                     break
 
+                mutation_for_column = prepared_mutation.config
                 mutation_name = mutation_for_column['mutation_name']
                 mutation_kwargs = mutation_for_column['mutation_kwargs']
-                mutation_relations = mutation_for_column['mutation_relations']
+                mutation_relations = prepared_mutation.relations
                 mutation_conditions = mutation_for_column['mutation_conditions']
 
                 if not self._checking_conditions(conditions=mutation_conditions, table_values=table_values):
@@ -228,11 +235,12 @@ class PlainObfuscator:
 
                 new_value = None
                 for mutation_relation in mutation_relations:
-                    key_table = f'{mutation_relation["table_name"]}:{mutation_relation["column_name"]}'
-                    from_column_name = mutation_relation['from_column_name']
-                    to_column_name = mutation_relation['to_column_name']
-                    relation_key_value = table_values[self._enumerate_table_columns[from_column_name]]
-                    relation_fk = self._relation_fk.get(key_table, {}).get(to_column_name, {}).get(relation_key_value)
+                    relation_key_value = table_values[mutation_relation.source_index]
+                    relation_fk = (
+                        self._relation_fk.get(mutation_relation.target_key, {})
+                        .get(mutation_relation.target_column, {})
+                        .get(relation_key_value)
+                    )
                     if not relation_fk:
                         continue
 
@@ -253,11 +261,10 @@ class PlainObfuscator:
                         obfuscated_values=context_obfuscated_values,
                     )
                     for mutation_relation in mutation_relations:
-                        key_table = f'{self._table_name}:{column_name}'
-                        from_column_name = mutation_relation['from_column_name']
-                        relation_key_value = table_values[self._enumerate_table_columns[from_column_name]]
-                        self._relation_fk[key_table].setdefault(from_column_name, {})
-                        self._relation_fk[key_table][from_column_name][relation_key_value] = relation_fk
+                        relation_key_value = table_values[mutation_relation.source_index]
+                        relation_keys = self._relation_fk[mutation_relation.source_key]
+                        relation_keys.setdefault(mutation_relation.source_column, {})
+                        relation_keys[mutation_relation.source_column][relation_key_value] = relation_fk
 
                     self._relation_values[relation_fk] = new_value
 
@@ -268,6 +275,23 @@ class PlainObfuscator:
                 obfuscated_values[column_name] = result_values[column_index]
 
         return self.delimiter.join(result_values)
+
+    def _prepare_mutation(self, *, column_name: str, mutation: MapTablesValueType) -> PreparedMutation:
+        """Подготовить ключи и индексы связей для обработки строк текущей таблицы."""
+        source_key = f'{self._table_name}:{column_name}'
+        return PreparedMutation(
+            config=mutation,
+            relations=[
+                PreparedRelation(
+                    target_key=f'{relation["table_name"]}:{relation["column_name"]}',
+                    target_column=relation['to_column_name'],
+                    source_column=relation['from_column_name'],
+                    source_index=self._enumerate_table_columns[relation['from_column_name']],
+                    source_key=source_key,
+                )
+                for relation in mutation['mutation_relations']
+            ],
+        )
 
     def _parse_copy_values(self, *, line: str) -> Optional[str]:
         """
@@ -306,7 +330,14 @@ class PlainObfuscator:
             for mutation in table_mutations.get(column_name, [])
         )
         self._column_plan = [
-            (column_name, self._enumerate_table_columns[column_name], table_mutations.get(column_name, []))
+            (
+                column_name,
+                self._enumerate_table_columns[column_name],
+                [
+                    self._prepare_mutation(column_name=column_name, mutation=mutation)
+                    for mutation in table_mutations.get(column_name, [])
+                ],
+            )
             for column_name in self._sorted_columns
             if self._needs_column_context or table_mutations.get(column_name)
         ]

@@ -215,6 +215,67 @@ def test_parse_copy_values_with_self_relation(obfuscator_object: PlainObfuscator
     assert prepared_result[1][0] == prepared_result[1][1]  # nosec
 
 
+@pytest.mark.parametrize('table_order', [('source', 'target'), ('target', 'source')])
+def test_relations_with_multiple_keys_and_different_column_order(
+    obfuscator_object: PlainObfuscator,
+    monkeypatch: pytest.MonkeyPatch,
+    table_order: tuple[str, str],
+) -> None:
+    """
+    Arrange: Две связанные таблицы с разным порядком колонок и двумя ключами связи
+    Act: Обработка таблиц в разном порядке с совпадением только по второму ключу
+    Assert: Значения согласованы по каждой связи, мутация вызывается только для первой таблицы
+    """
+    generated = []
+
+    def mutate(**kwargs: str) -> str:
+        value = f'hidden-{kwargs["current_value"]}'
+        generated.append(value)
+        return value
+
+    monkeypatch.setattr(obfuscator_object._mutator, 'mutation_first_name', mutate)
+    for table, other, from_columns, to_columns in [
+        ('source', 'target', ['id', 'alternate_id'], ['ref', 'alternate_ref']),
+        ('target', 'source', ['ref', 'alternate_ref'], ['id', 'alternate_id']),
+    ]:
+        mutation = [
+            {
+                'mutation_name': 'first_name',
+                'relations': [
+                    {
+                        'table_name': other,
+                        'column_name': 'name',
+                        'from_column_name': from_column,
+                        'to_column_name': to_column,
+                    }
+                    for from_column, to_column in zip(from_columns, to_columns)
+                ],
+            }
+        ]
+        obfuscator_object._parse_line(
+            line=f"COMMENT ON COLUMN {table}.name IS 'anon: {json.dumps(mutation)}';",
+        )
+
+    copy_statements = {
+        'source': 'COPY source (name, id, alternate_id) FROM stdin;',
+        'target': 'COPY target (alternate_ref, name, ref) FROM stdin;',
+    }
+    rows = {
+        'source': ['Alice\t1\ta', 'Bob\t2\tb'],
+        'target': ['a\tCarol\tmissing-1', 'b\tDave\tmissing-2'],
+    }
+    results = {}
+    for table in table_order:
+        obfuscator_object._parse_line(line=copy_statements[table])
+        results[table] = [obfuscator_object._parse_line(line=row) for row in rows[table]]
+        obfuscator_object._parse_line(line='\\.')
+
+    names = ['hidden-Alice', 'hidden-Bob'] if table_order[0] == 'source' else ['hidden-Carol', 'hidden-Dave']
+    assert results['source'] == [f'{names[0]}\t1\ta', f'{names[1]}\t2\tb']
+    assert results['target'] == [f'a\t{names[0]}\tmissing-1', f'b\t{names[1]}\tmissing-2']
+    assert generated == names
+
+
 def test_two_mutation_for_one_column(obfuscator_object: PlainObfuscator) -> None:
     """
     Arrange: Дамп таблицы, в которой необходимо мутировать данные с двумя видами мутации
